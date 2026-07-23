@@ -1,0 +1,77 @@
+name: yunpaste
+
+services:
+  yunpaste:
+    build:
+      context: .
+      args:
+        APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.13.0}"
+        VCS_REF: "${VCS_REF:-unknown}"
+        RCLONE_VERSION: "1.74.4"
+    image: "yunpaste:${TIEYUN_IMAGE_TAG:-1.13.0}"
+    restart: unless-stopped
+    stop_grace_period: 40s
+    ports:
+      - "${TIEYUN_BIND:-127.0.0.1}:${TIEYUN_PORT:-8787}:8787"
+    environment:
+      NODE_ENV: production
+      PORT: "8787"
+      CONFIG_DIR: /config
+      FILES_DIR: /files
+      APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.13.0}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@yunpaste.local}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+      ADMIN_PASSWORD_FILE: "${ADMIN_PASSWORD_FILE:-}"
+      ALLOW_INSECURE_ADMIN_CREDENTIALS: "${ALLOW_INSECURE_ADMIN_CREDENTIALS:-false}"
+      JWT_SECRET: "${JWT_SECRET:-}"
+      JWT_SECRET_FILE: "${JWT_SECRET_FILE:-}"
+      DATABASE_KEY_FILE: "${DATABASE_KEY_FILE:-}"
+      STORAGE_SECRET_FILE: "${STORAGE_SECRET_FILE:-}"
+      SEED_DEMO_DATA: "false"
+      TRUST_PROXY: "${TRUST_PROXY:-false}"
+      MIN_FREE_BYTES: "${MIN_FREE_BYTES:-268435456}"
+      REMOTE_STORAGE_TIMEOUT_MS: "${REMOTE_STORAGE_TIMEOUT_MS:-120000}"
+      REMOTE_STORAGE_CONCURRENCY: "${REMOTE_STORAGE_CONCURRENCY:-8}"
+      REMOTE_STORAGE_QUEUE_LIMIT: "${REMOTE_STORAGE_QUEUE_LIMIT:-128}"
+      LIBREOFFICE_PATH: /usr/bin/soffice
+      OFFICE_PREVIEW_CONCURRENCY: "${OFFICE_PREVIEW_CONCURRENCY:-2}"
+    volumes:
+      - "${TIEYUN_CONFIG_VOLUME:-yunpaste-config}:/config"
+      - "${TIEYUN_FILES_VOLUME:-yunpaste-files}:/files"
+      - "${TIEYUN_SECRETS_PATH:-./secrets}:/run/secrets:ro"
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777,noexec,nosuid,nodev
+    user: "10001:10001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.5
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/readyz',{signal:AbortSignal.timeout(7000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  yunpaste-config:
+    name: yunpaste-config
+  yunpaste-files:
+    name: yunpaste-files

@@ -1,0 +1,32 @@
+name: 功能建议
+description: 提议一个明确的新功能或体验改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 希望解决的问题
+      description: 请先描述使用场景和当前痛点。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述期望的交互、权限边界和配置方式。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: 可能影响
+      options:
+        - label: 数据库结构或迁移
+        - label: Docker 或部署配置
+        - label: 用户权限或安全边界
+        - label: WebDAV / SMB 兼容性

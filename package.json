@@ -35,17 +35,17 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/mime-types": "^2.1.4",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^24.0.10",
+    "@types/mime-types": "^3.0.1",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
-    "concurrently": "^9.2.0",
-    "lucide-react": "^0.525.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.4"
+    "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^10.0.3",
+    "lucide-react": "^1.26.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
   }
 }

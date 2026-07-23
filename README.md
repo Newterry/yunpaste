@@ -1,7 +1,6 @@
 # 云粘贴 YunPaste
 
 > 一套美观、安全、真正适合长期运行的自托管网络粘贴板与文件管理系统。
-
 ![Version](https://img.shields.io/badge/version-1.13.0-ff655f)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
@@ -20,6 +19,8 @@
 
 项目面向个人、家庭、小团队和内网环境，使用标准 Docker Compose 部署。所有关键
 数据都明确落在 `/config` 和 `/files`，可以自主管理、备份、迁移和恢复。
+
+这是我（柯十二），利用gpt5.6-sol做出来的，中间修改修正了20多个版本，但是难免还是会有问题的，欢迎大家帮忙测试，提供建议。
 
 ## 目录
 

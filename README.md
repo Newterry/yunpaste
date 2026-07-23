@@ -7,6 +7,11 @@
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-22a06b)
+[![CI](https://github.com/Newterry/yunpaste/actions/workflows/ci.yml/badge.svg)](https://github.com/Newterry/yunpaste/actions/workflows/ci.yml)
+
+<p align="center">
+  <img src="public/assets/cloud-workspace.webp" alt="云粘贴支持文本、图片、音视频、PDF 与常用办公文档" width="760">
+</p>
 
 云粘贴把“临时粘贴文本”“跨设备传文件”“在线预览”“个人网盘”和“团队文件管理”
 整合在一个统一界面里。它支持多用户、严格的用户数据隔离、文件夹、全文模糊搜索、
@@ -587,8 +592,8 @@ npm run dev
 
 ```bash
 npm run check
-npm test
 npm run build
+npm test
 ```
 
 本地开发默认使用仓库下的 `config/` 与 `files/`；旧测试和旧环境若仅设置

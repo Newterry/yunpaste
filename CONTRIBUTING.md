@@ -26,8 +26,8 @@ npm run dev
 
 ```bash
 npm run check
-npm test
 npm run build
+npm test
 ```
 
 涉及 Docker、LibreOffice 预览或 rclone 的修改还应运行：

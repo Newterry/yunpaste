@@ -1,4 +1,4 @@
-export type ThemeName = "cloud" | "ink" | "mist";
+export type ThemeName = "cloud" | "ink" | "mist" | "forest" | "sunset" | "lavender";
 export type NavView =
   | "overview"
   | "files"

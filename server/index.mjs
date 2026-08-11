@@ -59,8 +59,10 @@ const reservationTtlMs = Math.max(2 * 60 * 60_000, requestTimeout + 60 * 60_000)
 const dummyPasswordHash = bcrypt.hashSync(randomBytes(24).toString("base64url"), 12);
 const execFileAsync = promisify(execFile);
 const officePreviewExtensions = new Set([
-  ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp",
-  ".rtf", ".wps", ".et", ".dps"
+  ".doc", ".docx", ".docm", ".dot", ".dotx", ".dotm",
+  ".xls", ".xlsx", ".xlsm", ".xlt", ".xltx", ".xltm",
+  ".ppt", ".pptx", ".pptm", ".pot", ".potx", ".potm", ".pps", ".ppsx", ".ppsm",
+  ".odt", ".ods", ".odp", ".rtf", ".wps", ".et", ".dps", ".vsd", ".vsdx", ".pub"
 ]);
 const officePreviewConcurrency = Math.max(1, Math.min(4, Number(process.env.OFFICE_PREVIEW_CONCURRENCY) || 2));
 let activeOfficePreviews = 0;
@@ -148,11 +150,11 @@ const kindFromMime = (type = "", name = "") => {
   if (/\.(mp4|m4v|mov|webm|mkv|avi)$/i.test(name)) return "video";
   if (
     normalized.startsWith("text/")
-    || /\.(md|txt|json|csv|log|html|css|js|mjs|cjs|ts|tsx|jsx|yaml|yml|xml|ini)$/i.test(name)
+    || /\.(md|markdown|txt|json|jsonl|csv|tsv|log|html?|css|s[ac]ss|less|js|mjs|cjs|ts|tsx|jsx|yaml|yml|xml|ini|toml|conf|cfg|properties|sql|sh|bash|zsh|py|java|c|cc|cpp|h|hpp|go|rs|php|rb|swift|kt|kts)$/i.test(name)
   ) return "text";
   if (
     /pdf|word|excel|powerpoint|opendocument|officedocument|rtf/.test(normalized)
-    || /\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|rtf|wps|et|dps)$/i.test(name)
+    || /\.(doc|docx|docm|dot|dotx|dotm|xls|xlsx|xlsm|xlt|xltx|xltm|ppt|pptx|pptm|pot|potx|potm|pps|ppsx|ppsm|odt|ods|odp|rtf|wps|et|dps|vsd|vsdx|pub)$/i.test(name)
   ) return "document";
   if (/zip|rar|tar|gzip|7z|bzip|xz/.test(normalized) || /\.(zip|rar|tar|gz|7z|bz2|xz)$/i.test(name)) return "archive";
   return "other";

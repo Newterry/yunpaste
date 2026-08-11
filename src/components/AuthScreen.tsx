@@ -1,10 +1,12 @@
 import {
   Eye, EyeOff, LockKeyhole, Mail, MonitorSmartphone, ScanEye,
-  ShieldCheck, UserRound
+  ShieldCheck, UserRound, Languages
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Brand } from "./Brand";
 import type { PublicConfig } from "../types";
+import { useI18n } from "../lib/i18n";
+import { localeOptions, type AppLocale } from "../lib/locale";
 
 export function AuthScreen({ onSubmit, busy, error, config }: {
   onSubmit: (
@@ -15,6 +17,7 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
   error?: string;
   config: PublicConfig;
 }) {
+  const { locale, setLocale, t } = useI18n();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -38,12 +41,12 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
       <section className="auth-showcase" aria-label="云粘贴功能简介">
         <Brand name={config.siteName} />
         <div className="auth-showcase__copy">
-          <h2>把灵感与文件，<br /><span>安全</span>地放在一起。</h2>
-          <p>文本、图片、音视频与文档，在你的私有空间自然流转。</p>
+          <h2>{t("auth.hero")}</h2>
+          <p>{t("auth.subtitle")}</p>
           <div className="auth-benefits">
-            <span><ScanEye />多格式即时预览</span>
-            <span><ShieldCheck />私有部署与权限控制</span>
-            <span><MonitorSmartphone />桌面与移动端自然适配</span>
+            <span><ScanEye />{t("auth.preview")}</span>
+            <span><ShieldCheck />{t("auth.private")}</span>
+            <span><MonitorSmartphone />{t("auth.responsive")}</span>
           </div>
         </div>
         <img
@@ -57,10 +60,11 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
         />
       </section>
       <section className="auth-form-area">
+        <label className="auth-language" title={t("common.language")}><Languages /><select value={locale} onChange={(event) => setLocale(event.target.value as AppLocale)} aria-label={t("common.language")}>{localeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <div className="auth-form">
           <div className="auth-mobile-brand"><Brand name={config.siteName} /></div>
-          <h1 id="auth-heading">{mode === "login" ? "欢迎回来" : "创建你的账户"}</h1>
-          <p>{mode === "login" ? "登录后继续管理你的内容。" : "几秒钟开始使用你的私有空间。"}</p>
+          <h1 id="auth-heading">{mode === "login" ? t("auth.welcome") : "创建你的账户"}</h1>
+          <p>{mode === "login" ? t("auth.loginHint") : "几秒钟开始使用你的私有空间。"}</p>
           <div
             className={`auth-mode ${config.allowRegistration ? "" : "auth-mode--single"}`}
             role="tablist"
@@ -74,7 +78,7 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
               onClick={() => changeMode("login")}
               disabled={busy}
             >
-              登录
+              {t("auth.login")}
             </button>
             {config.allowRegistration && (
               <button
@@ -85,7 +89,7 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
                 onClick={() => changeMode("register")}
                 disabled={busy}
               >
-                注册
+                {t("auth.register")}
               </button>
             )}
           </div>
@@ -132,14 +136,14 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
               </>
             )}
             <label>
-              <span>{mode === "login" ? "用户名或邮箱地址" : "邮箱地址"}</span>
+              <span>{mode === "login" ? t("auth.account") : "邮箱地址"}</span>
               <div className="auth-input">
                 <Mail aria-hidden="true" />
                 <input
                   type={mode === "login" ? "text" : "email"}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder={mode === "login" ? "请输入用户名或邮箱地址" : "请输入邮箱地址"}
+                  placeholder={mode === "login" ? t("auth.account") : "请输入邮箱地址"}
                   autoComplete={mode === "login" ? "username" : "email"}
                   inputMode={mode === "login" ? "text" : "email"}
                   required
@@ -147,14 +151,14 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
               </div>
             </label>
             <label>
-              <span>密码</span>
+              <span>{t("auth.password")}</span>
               <div className="auth-input password-input">
                 <LockKeyhole aria-hidden="true" />
                 <input
                   type={visible ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="请输入密码"
+                  placeholder={t("auth.password")}
                   minLength={mode === "login" ? 1 : 8}
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   required
@@ -166,7 +170,7 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
             </label>
             {error && !hideError && <div className="form-error" role="alert">{error}</div>}
             <button type="submit" className="button button--primary auth-submit" disabled={busy}>
-              <span>{busy ? (mode === "login" ? "正在登录…" : "正在创建…") : (mode === "login" ? "进入工作台" : "创建账户")}</span>
+              <span>{busy ? (mode === "login" ? t("auth.busy") : "正在创建…") : (mode === "login" ? t("auth.submit") : "创建账户")}</span>
             </button>
             <span className="sr-only" aria-live="polite">
               {busy ? (mode === "login" ? "正在登录，请稍候" : "正在创建账户，请稍候") : ""}

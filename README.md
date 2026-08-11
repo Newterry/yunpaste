@@ -1,7 +1,8 @@
 # 云粘贴 YunPaste
 
 > 一套美观、安全、真正适合长期运行的自托管网络粘贴板与文件管理系统。
-![Version](https://img.shields.io/badge/version-1.13.0-ff655f)
+
+![Version](https://img.shields.io/badge/version-1.14.0-ff655f)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white)
@@ -51,9 +52,10 @@
 
 ### 3. 强大的本地预览，私有文件不必交给第三方在线转换
 
-图片、音频、视频、文本、Markdown 和 PDF 可直接预览；Word、Excel、PowerPoint、
-WPS 与 OpenDocument 文档由容器内的 LibreOffice 转换为 PDF 后展示。预览读取仍受
-用户身份、文件状态和短期访问凭据约束。
+图片、音频、视频、文本、Markdown、JSON、代码与 PDF 可直接预览；Word、Excel、
+PowerPoint、WPS、OpenDocument、Office 模板和宏文档由容器内的 LibreOffice 转换为
+PDF 后展示。预览支持大面积展开、图片缩放旋转与文本复制，读取仍受用户身份、文件
+状态和短期访问凭据约束。
 
 ### 4. 本地存储与远端存储可以同时发挥作用
 
@@ -95,14 +97,14 @@ Manifest、Apple Touch Icon 和 Service Worker，可添加到手机桌面，以�
 | --- | --- |
 | 内容管理 | 纯文本、Markdown、单文件与多文件上传、拖拽上传、文件夹、批量操作 |
 | 文件管理 | 列表/网格/图片视图、排序、分页、模糊搜索、重命名、复制、移动、回收站 |
-| 在线预览 | 文本、图片、音视频、PDF、Office、WPS、OpenDocument |
+| 在线预览 | 文本/代码/JSON、图片缩放旋转、音视频、PDF、Office、WPS、OpenDocument |
 | 分享 | 快速分享、高熵令牌、1/3/7 天有效期、随时撤销、过期时间展示 |
 | 生命周期 | 默认 30 天、收藏永久保留、过期提醒、定时清理、回收站保留 |
 | 用户系统 | 用户名或邮箱登录、普通用户/管理员角色、头像、资料与密码修改、账号注销 |
 | 管理中心 | 用户与角色、配额、注册策略、上传限制、存储、保留期、安全与运行状态 |
 | 远端文件 | 多个个人 WebDAV、全局 WebDAV/SMB、远端文件管理、双向传输 |
 | 协作支持 | 用户工单、管理员回复、状态跟踪 |
-| 外观体验 | 多套皮肤、响应式布局、桌面文件管理器、移动 App 式导航、PWA |
+| 外观体验 | 6 套皮肤、自适应字号、7 种主流语言、响应式布局、移动 App 式导航、PWA |
 | 运维能力 | Docker Compose、健康检查、加密配置导入导出、备份恢复、优雅停机 |
 
 默认每位用户拥有 20 GiB 配额。公开注册创建的账号始终为普通用户，只有管理员可以
@@ -112,12 +114,12 @@ Manifest、Apple Touch Icon 和 Service Worker，可添加到手机桌面，以�
 
 | 类型 | 示例格式 | 预览方式 |
 | --- | --- | --- |
-| 文本 | TXT、Markdown、JSON、日志和常见文本内容 | 浏览器内文本预览与一键复制 |
-| 图片 | PNG、JPEG、GIF、WebP、SVG 等 | 自适应图片预览 |
+| 文本与代码 | TXT、Markdown、JSON/JSONL、CSV/TSV、YAML、TOML、SQL 与常见源码 | 浏览器内预览、JSON 美化与一键复制 |
+| 图片 | PNG、JPEG、GIF、WebP、AVIF、SVG 等 | 自适应预览、缩放与旋转 |
 | 音频 | MP3、WAV、M4A、AAC、FLAC、OGG、Opus | 原生音频播放器 |
 | 视频 | MP4、WebM、MOV 等浏览器支持格式 | 原生视频播放器与 Range 流 |
 | PDF | PDF | 同源嵌入式阅读 |
-| Office | DOC/DOCX、XLS/XLSX、PPT/PPTX、RTF | LibreOffice 转换为 PDF |
+| Office | DOC/DOCX/DOCM、XLS/XLSX/XLSM、PPT/PPTX/PPTM、模板、幻灯片放映、RTF | LibreOffice 转换为 PDF |
 | WPS | WPS、ET、DPS | LibreOffice 兼容转换 |
 | OpenDocument | ODT、ODS、ODP | LibreOffice 转换为 PDF |
 
@@ -249,7 +251,7 @@ sudo install -d -o root -g 10001 -m 0750 /srv/yunpaste/secrets
 
 | 变量 | 默认值 | 作用 |
 | --- | --- | --- |
-| `TIEYUN_IMAGE_TAG` | `1.13.0` | 构建标签和运行版本 |
+| `TIEYUN_IMAGE_TAG` | `1.14.0` | 构建标签和运行版本 |
 | `TIEYUN_BIND` | `127.0.0.1` | 宿主机监听地址 |
 | `TIEYUN_PORT` | `8787` | 宿主机监听端口 |
 | `TIEYUN_CONFIG_VOLUME` | `yunpaste-config` | 映射到 `/config` 的命名卷或绝对路径 |

@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ThemeName } from "../types";
+import { useI18n } from "../lib/i18n";
 
 export function Modal({ children, onClose, label, returnFocus }: {
   children: React.ReactNode;
@@ -184,7 +185,10 @@ export function ContentModal({
 const themes: Array<{ id: ThemeName; name: string; detail: string; icon: typeof Palette; colors: string[] }> = [
   { id: "cloud", name: "云白", detail: "真白画布与珊瑚红强调色", icon: CloudSun, colors: ["#ffffff", "#ff5d52", "#111b2b"] },
   { id: "ink", name: "墨夜", detail: "深色工作区，适合夜间使用", icon: MoonStar, colors: ["#151821", "#ff776c", "#edeef3"] },
-  { id: "mist", name: "雾蓝", detail: "低饱和蓝灰，专注而舒缓", icon: Sparkles, colors: ["#edf3f8", "#4f6bed", "#1d3045"] }
+  { id: "mist", name: "雾蓝", detail: "低饱和蓝灰，专注而舒缓", icon: Sparkles, colors: ["#edf3f8", "#4f6bed", "#1d3045"] },
+  { id: "forest", name: "森屿", detail: "自然绿与青灰，安静且耐看", icon: Sparkles, colors: ["#f2f7f3", "#2d8a67", "#163b35"] },
+  { id: "sunset", name: "落霞", detail: "暖沙色与落日橙，柔和亲切", icon: CloudSun, colors: ["#fff9f2", "#e36d4f", "#49302e"] },
+  { id: "lavender", name: "鸢尾", detail: "淡紫与蓝莓色，轻盈而现代", icon: Sparkles, colors: ["#faf8ff", "#795bd7", "#282541"] }
 ];
 
 export function ThemeModal({ theme, onTheme, onClose, returnFocus }: {
@@ -193,11 +197,12 @@ export function ThemeModal({ theme, onTheme, onClose, returnFocus }: {
   onClose: () => void;
   returnFocus?: React.RefObject<HTMLElement | null>;
 }) {
+  const { t } = useI18n();
   return (
-    <Modal onClose={onClose} label="选择界面皮肤" returnFocus={returnFocus}>
+    <Modal onClose={onClose} label={t("theme.title")} returnFocus={returnFocus}>
       <div className="modal-header">
-        <div><span className="modal-icon"><Palette /></span><div><h2>界面皮肤</h2><p>选择最适合你的工作氛围。</p></div></div>
-        <button className="icon-button" onClick={onClose} aria-label="关闭皮肤选择"><X /></button>
+        <div><span className="modal-icon"><Palette /></span><div><h2>{t("theme.title")}</h2><p>{t("theme.subtitle")} · {t("theme.autoFont")}</p></div></div>
+        <button className="icon-button" onClick={onClose} aria-label={t("common.close")}><X /></button>
       </div>
       <div className="theme-grid">
         {themes.map((item) => {
@@ -207,14 +212,14 @@ export function ThemeModal({ theme, onTheme, onClose, returnFocus }: {
               <span className={`theme-preview theme-preview--${item.id}`}>
                 <i /><b /><em /><small />
               </span>
-              <span className="theme-card__copy"><Icon /><span><strong>{item.name}</strong><small>{item.detail}</small></span></span>
+              <span className="theme-card__copy"><Icon /><span><strong>{t(`theme.${item.id}` as "theme.cloud")}</strong><small>{item.detail}</small></span></span>
               <span className="theme-swatches">{item.colors.map((color) => <i key={color} style={{ backgroundColor: color }} />)}</span>
               {theme === item.id && <span className="theme-check"><Check /></span>}
             </button>
           );
         })}
       </div>
-      <div className="modal-actions"><button className="button button--primary" onClick={onClose}>完成</button></div>
+      <div className="modal-actions"><button className="button button--primary" onClick={onClose}>{t("theme.done")}</button></div>
     </Modal>
   );
 }

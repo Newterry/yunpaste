@@ -8,7 +8,7 @@ export function formatBytes(bytes = 0) {
 
 export function formatDate(value?: string, includeTime = true) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(getActiveLocale(), {
     month: "2-digit",
     day: "2-digit",
     ...(includeTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {})
@@ -22,3 +22,4 @@ export function initials(name: string) {
 export function fileExtension(name: string) {
   return name.includes(".") ? name.split(".").pop()?.toUpperCase() : "FILE";
 }
+import { getActiveLocale } from "./locale";

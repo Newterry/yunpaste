@@ -1,12 +1,14 @@
 import {
   ArchiveRestore, ChevronDown, CloudCog, FileHeart, Files, Gauge, Grid2X2, HardDrive,
-  Home, Images, LayoutList, LogOut, Menu, MoonStar, Plus, Search, Settings2, Share2,
+  Home, Images, Languages, LayoutList, LogOut, Menu, MoonStar, Plus, Search, Settings2, Share2,
   Sparkles, TicketCheck, Trash2, UserCog, X
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "./Brand";
 import type { FileLayout, NavView, ThemeName, User } from "../types";
 import { formatBytes, initials } from "../lib/format";
+import { useI18n } from "../lib/i18n";
+import { localeOptions, type AppLocale } from "../lib/locale";
 
 interface SidebarProps {
   user: User;
@@ -20,20 +22,22 @@ interface SidebarProps {
   allowTickets: boolean;
 }
 
-const primaryNav: Array<[NavView, string, typeof Gauge]> = [
-  ["overview", "概览", Gauge],
-  ["files", "我的文件", Files],
-  ["shared", "共享链接", Share2],
-  ["favorites", "收藏", FileHeart],
-  ["webdav", "个人 WebDAV", CloudCog],
-  ["tickets", "工单", TicketCheck],
-  ["trash", "回收站", Trash2]
+type NavLabelKey = "nav.overview" | "nav.files" | "nav.shared" | "nav.favorites" | "nav.webdav" | "nav.tickets" | "nav.trash";
+const primaryNav: Array<[NavView, NavLabelKey, typeof Gauge]> = [
+  ["overview", "nav.overview", Gauge],
+  ["files", "nav.files", Files],
+  ["shared", "nav.shared", Share2],
+  ["favorites", "nav.favorites", FileHeart],
+  ["webdav", "nav.webdav", CloudCog],
+  ["tickets", "nav.tickets", TicketCheck],
+  ["trash", "nav.trash", Trash2]
 ];
 
 export function Sidebar({
   user, view, collapsed, mobileOpen, onNavigate, onCloseMobile, siteName,
   allowPersonalWebdav, allowTickets
 }: SidebarProps) {
+  const { t } = useI18n();
   const quotaPercent = user.quota > 0 ? Math.min(100, (user.usage / user.quota) * 100) : 100;
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 760px)").matches);
   const drawer = useRef<HTMLElement>(null);
@@ -96,7 +100,7 @@ export function Sidebar({
   ));
   return (
     <>
-      {mobileOpen && <button className="mobile-scrim" onClick={onCloseMobile} aria-label="关闭导航" />}
+      {mobileOpen && <button className="mobile-scrim" onClick={onCloseMobile} aria-label={t("common.close")} />}
       <aside
         ref={drawer}
         className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "sidebar--open" : ""}`}
@@ -108,20 +112,20 @@ export function Sidebar({
           <button className="sidebar__mobile-close icon-button" onClick={onCloseMobile} aria-label="关闭导航"><X /></button>
         </div>
         <nav className="sidebar__nav" aria-label="主导航">
-          {visibleNav.map(([key, label, Icon]) => (
-            <button key={key} className={view === key ? "is-active" : ""} onClick={() => go(key)} title={label} aria-current={view === key ? "page" : undefined}>
+          {visibleNav.map(([key, labelKey, Icon]) => (
+            <button key={key} className={view === key ? "is-active" : ""} onClick={() => go(key)} title={t(labelKey)} aria-current={view === key ? "page" : undefined}>
               <Icon />
-              {!collapsed && <span>{label}</span>}
+              {!collapsed && <span>{t(labelKey)}</span>}
             </button>
           ))}
         </nav>
         <div className="sidebar__spacer" />
-        <div className="storage-card" title={`已使用 ${formatBytes(user.usage)}`}>
+        <div className="storage-card" title={`${t("storage.used")} ${formatBytes(user.usage)}`}>
           <div className="storage-card__label">
             <HardDrive />
             {!collapsed && (
               <span>
-                <small>存储空间</small>
+                <small>{t("storage.title")}</small>
                 <strong>{formatBytes(user.usage)} / {formatBytes(user.quota)}</strong>
               </span>
             )}
@@ -137,14 +141,14 @@ export function Sidebar({
           <span className="avatar avatar--large">{user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : initials(user.name)}</span>
           {!collapsed && (
             <>
-              <span><strong>{user.name}</strong><small>{user.isPrimaryAdmin ? "主管理员" : user.role === "admin" ? "管理员" : "普通用户"}</small></span>
+              <span><strong>{user.name}</strong><small>{user.isPrimaryAdmin ? t("role.primary") : user.role === "admin" ? t("role.admin") : t("role.member")}</small></span>
               <UserCog />
             </>
           )}
         </button>
         {user.role === "admin" && (
           <button className={`sidebar-admin-link ${view === "admin" ? "is-active" : ""}`} onClick={() => go("admin")}>
-            <Settings2 />{!collapsed && <span>管理中心</span>}
+            <Settings2 />{!collapsed && <span>{t("nav.admin")}</span>}
           </button>
         )}
       </aside>
@@ -169,20 +173,21 @@ interface TopbarProps {
 export function Topbar({
   user, query, onQuery, layout, onLayout, theme, onTheme, onMenu, onLogout, onProfile, view
 }: TopbarProps) {
+  const { locale, setLocale, t } = useI18n();
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const profile = useRef<HTMLDivElement>(null);
   const viewLabels: Record<NavView, string> = {
-    overview: "概览",
-    files: "我的文件",
-    shared: "共享链接",
-    favorites: "收藏",
-    webdav: "个人 WebDAV",
-    tickets: "工单",
-    trash: "回收站",
-    profile: "个人设置",
-    admin: "管理中心"
+    overview: t("nav.overview"),
+    files: t("nav.files"),
+    shared: t("nav.shared"),
+    favorites: t("nav.favorites"),
+    webdav: t("nav.webdav"),
+    tickets: t("nav.tickets"),
+    trash: t("nav.trash"),
+    profile: t("nav.profile"),
+    admin: t("nav.admin")
   };
   const searchable = view === "overview" || view === "files" || view === "shared" || view === "favorites" || view === "trash";
 
@@ -216,16 +221,22 @@ export function Topbar({
         <button className="topbar__mobile-search icon-button" onClick={() => { setMobileSearchOpen(true); window.requestAnimationFrame(() => searchInput.current?.focus()); }} aria-label="搜索文件"><Search /></button>
         <div className={`searchbox ${mobileSearchOpen ? "is-mobile-open" : ""}`} role="search">
           <Search />
-          <input ref={searchInput} name="yunpaste-file-search" value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索文件与内容" aria-label="模糊搜索文件名、类型或扩展名" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" />
+          <input ref={searchInput} name="yunpaste-file-search" value={query} onChange={(event) => onQuery(event.target.value)} placeholder={t("common.search")} aria-label={t("common.search")} autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" />
           <kbd>⌘ K</kbd>
           <button type="button" className="searchbox__close" onClick={() => { setMobileSearchOpen(false); searchInput.current?.blur(); }} aria-label="关闭搜索"><X /></button>
         </div>
       </>}
       <div className="view-switch" aria-label="视图模式">
-        <button className={layout === "list" ? "is-active" : ""} onClick={() => onLayout("list")} aria-label="列表视图"><LayoutList /></button>
-        <button className={layout === "grid" ? "is-active" : ""} onClick={() => onLayout("grid")} aria-label="网格视图"><Grid2X2 /></button>
-        <button className={layout === "gallery" ? "is-active" : ""} onClick={() => onLayout("gallery")} aria-label="图片视图"><Images /></button>
+        <button className={layout === "list" ? "is-active" : ""} onClick={() => onLayout("list")} aria-label={t("common.list")}><LayoutList /></button>
+        <button className={layout === "grid" ? "is-active" : ""} onClick={() => onLayout("grid")} aria-label={t("common.grid")}><Grid2X2 /></button>
+        <button className={layout === "gallery" ? "is-active" : ""} onClick={() => onLayout("gallery")} aria-label={t("common.gallery")}><Images /></button>
       </div>
+      <label className="topbar-language" title={t("common.language")}>
+        <Languages aria-hidden="true" />
+        <select value={locale} onChange={(event) => setLocale(event.target.value as AppLocale)} aria-label={t("common.language")}>
+          {localeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </label>
       <button className="icon-button theme-trigger" onClick={onTheme} aria-label={`切换皮肤，当前 ${theme}`}>
         {theme === "ink" ? <MoonStar /> : theme === "mist" ? <Sparkles /> : <MoonStar />}
       </button>
@@ -238,8 +249,8 @@ export function Topbar({
         {profileOpen && (
           <div className="profile-menu">
             <span><strong>{user.name}</strong><small>{user.email}</small></span>
-            <button onClick={() => { setProfileOpen(false); onProfile(); }}><UserCog />个人设置</button>
-            <button onClick={onLogout}><LogOut />退出登录</button>
+            <button onClick={() => { setProfileOpen(false); onProfile(); }}><UserCog />{t("nav.profile")}</button>
+            <button onClick={onLogout}><LogOut />{t("common.logout")}</button>
           </div>
         )}
       </div>
@@ -252,13 +263,14 @@ export function MobileNav({ view, onNavigate, onAdd }: {
   onNavigate: (view: NavView) => void;
   onAdd: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <nav className="mobile-nav">
-      <button className={view === "overview" ? "is-active" : ""} onClick={() => onNavigate("overview")} aria-current={view === "overview" ? "page" : undefined}><Gauge /><span>概览</span></button>
-      <button className={view === "files" ? "is-active" : ""} onClick={() => onNavigate("files")} aria-current={view === "files" ? "page" : undefined}><Files /><span>文件</span></button>
-      <button className="mobile-nav__create" onClick={onAdd} aria-label="添加内容"><Plus /></button>
-      <button className={view === "shared" ? "is-active" : ""} onClick={() => onNavigate("shared")} aria-current={view === "shared" ? "page" : undefined}><Share2 /><span>共享</span></button>
-      <button className={view === "trash" ? "is-active" : ""} onClick={() => onNavigate("trash")} aria-current={view === "trash" ? "page" : undefined}><ArchiveRestore /><span>回收站</span></button>
+      <button className={view === "overview" ? "is-active" : ""} onClick={() => onNavigate("overview")} aria-current={view === "overview" ? "page" : undefined}><Gauge /><span>{t("nav.overview")}</span></button>
+      <button className={view === "files" ? "is-active" : ""} onClick={() => onNavigate("files")} aria-current={view === "files" ? "page" : undefined}><Files /><span>{t("common.files")}</span></button>
+      <button className="mobile-nav__create" onClick={onAdd} aria-label={t("common.add")}><Plus /></button>
+      <button className={view === "shared" ? "is-active" : ""} onClick={() => onNavigate("shared")} aria-current={view === "shared" ? "page" : undefined}><Share2 /><span>{t("common.share")}</span></button>
+      <button className={view === "trash" ? "is-active" : ""} onClick={() => onNavigate("trash")} aria-current={view === "trash" ? "page" : undefined}><ArchiveRestore /><span>{t("nav.trash")}</span></button>
     </nav>
   );
 }

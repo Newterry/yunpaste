@@ -1,11 +1,25 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { I18nProvider } from "./lib/i18n";
 import "./styles.css";
+
+function updateResponsiveFontScale() {
+  const width = window.visualViewport?.width || window.innerWidth;
+  const height = window.visualViewport?.height || window.innerHeight;
+  const reference = Math.min(Math.sqrt(width / 1366), Math.sqrt(height / 768));
+  const mobileBoost = width <= 760 ? 1.04 : 1;
+  const scale = Math.max(0.94, Math.min(1.18, reference * mobileBoost));
+  document.documentElement.style.setProperty("--font-scale", scale.toFixed(3));
+}
+
+updateResponsiveFontScale();
+window.addEventListener("resize", updateResponsiveFontScale, { passive: true });
+window.visualViewport?.addEventListener("resize", updateResponsiveFontScale, { passive: true });
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <I18nProvider><App /></I18nProvider>
   </StrictMode>
 );
 

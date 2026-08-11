@@ -88,7 +88,7 @@ function shareTokenFromPath(pathname: string) {
 function initialTheme(): ThemeName {
   try {
     const saved = localStorage.getItem("tieyun.theme");
-    return saved === "ink" || saved === "mist" || saved === "cloud" ? saved : "cloud";
+    return saved === "ink" || saved === "mist" || saved === "cloud" || saved === "forest" || saved === "sunset" || saved === "lavender" ? saved : "cloud";
   } catch {
     return "cloud";
   }

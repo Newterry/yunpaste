@@ -5,10 +5,10 @@ services:
     build:
       context: .
       args:
-        APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.14.0}"
+        APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.15.0}"
         VCS_REF: "${VCS_REF:-unknown}"
         RCLONE_VERSION: "1.74.4"
-    image: "yunpaste:${TIEYUN_IMAGE_TAG:-1.14.0}"
+    image: "yunpaste:${TIEYUN_IMAGE_TAG:-1.15.0}"
     restart: unless-stopped
     stop_grace_period: 40s
     ports:
@@ -18,7 +18,7 @@ services:
       PORT: "8787"
       CONFIG_DIR: /config
       FILES_DIR: /files
-      APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.14.0}"
+      APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.15.0}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@yunpaste.local}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
       ADMIN_PASSWORD_FILE: "${ADMIN_PASSWORD_FILE:-}"

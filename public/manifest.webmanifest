@@ -1,7 +1,7 @@
 {
   "name": "云粘贴",
   "short_name": "云粘贴",
-  "description": "安全、自托管的网络粘贴板与文件管理系统",
+  "description": "一处复制，随处粘贴。不下载，不占手机文件空间的自托管跨设备文件助手。",
   "lang": "zh-CN",
   "start_url": "/#overview",
   "scope": "/",

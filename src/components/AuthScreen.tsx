@@ -1,6 +1,6 @@
 import {
-  Eye, EyeOff, LockKeyhole, Mail, MonitorSmartphone, ScanEye,
-  ShieldCheck, UserRound, Languages
+  Eye, EyeOff, Feather, Files, Languages, LockKeyhole, Mail, MonitorSmartphone,
+  ScanEye, Share2, ShieldCheck, UserRound
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Brand } from "./Brand";
@@ -44,25 +44,33 @@ export function AuthScreen({ onSubmit, busy, error, config }: {
           <h2>{t("auth.hero")}</h2>
           <p>{t("auth.subtitle")}</p>
           <div className="auth-benefits">
-            <span><ScanEye />{t("auth.preview")}</span>
-            <span><ShieldCheck />{t("auth.private")}</span>
-            <span><MonitorSmartphone />{t("auth.responsive")}</span>
+            <span><Feather /><strong>{t("auth.zeroSpace")}</strong></span>
+            <span><MonitorSmartphone /><strong>{t("auth.responsive")}</strong></span>
+            <span><Share2 /><strong>{t("auth.shareAnywhere")}</strong></span>
+            <span><ScanEye /><strong>{t("auth.preview")}</strong></span>
           </div>
         </div>
-        <img
-          className="auth-artwork"
-          src="/assets/cloud-workspace.webp"
-          alt=""
-          width="1200"
-          height="800"
-          decoding="async"
-          fetchPriority="high"
-        />
+        <picture className="auth-artwork">
+          <source srcSet="/assets/yunpaste-anywhere-hero.webp" type="image/webp" />
+          <img
+            src="/assets/yunpaste-anywhere-hero.png"
+            alt={t("auth.artworkAlt")}
+            width="1672"
+            height="941"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </picture>
       </section>
       <section className="auth-form-area">
         <label className="auth-language" title={t("common.language")}><Languages /><select value={locale} onChange={(event) => setLocale(event.target.value as AppLocale)} aria-label={t("common.language")}>{localeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <div className="auth-form">
           <div className="auth-mobile-brand"><Brand name={config.siteName} /></div>
+          <div className="auth-mobile-promise">
+            <strong>{t("auth.hero")}</strong>
+            <span>{t("auth.mobileSubtitle")}</span>
+            <div><Feather />{t("auth.zeroSpace")}<i /> <Files />{t("auth.cloudManaged")}</div>
+          </div>
           <h1 id="auth-heading">{mode === "login" ? t("auth.welcome") : "创建你的账户"}</h1>
           <p>{mode === "login" ? t("auth.loginHint") : "几秒钟开始使用你的私有空间。"}</p>
           <div

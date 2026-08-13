@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "better-sqlite3-multiple-ciphers": "12.11.1",
+    "better-sqlite3-multiple-ciphers": "13.0.3",
     "compression": "^1.8.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",

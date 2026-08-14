@@ -47,6 +47,7 @@
 - [数据库加密](#数据库加密)
 - [WebDAV 与 SMB 存储](#webdav-与-smb-存储)
 - [备份与恢复](#一致性备份)
+- [Flutter 客户端](#flutter-客户端)
 - [本地开发](#本地开发)
 
 ## 为什么选择云粘贴
@@ -618,6 +619,41 @@ docker compose logs --tail=200 yunpaste
 容器收到 SIGTERM 后会停止接收新连接、等待进行中的维护并 checkpoint SQLite。
 Compose 提供 40 秒停止宽限期。主机重启、强制 `kill -9` 或磁盘故障仍可能打断
 写入，因此不能替代可靠存储和可验证备份。
+
+## Flutter 客户端
+
+### Android Studio 导入提醒
+
+Flutter 客户端不在仓库根目录，而在 `flutter_app/`。使用 Android Studio 时请打开
+`flutter_app/`，不要直接打开仓库根目录，也不要把 `flutter_app/android/` 当作 Flutter
+工程根目录。详细步骤和 Dart SDK 配置见 [`flutter_app/README.md`](flutter_app/README.md)。
+
+
+仓库内还包含独立的 Flutter 客户端 `flutter_app/`，复用当前 Express 后端，支持 Web/H5、
+Android 和 iOS。客户端开发、H5 同源 Nginx 部署、Android 签名和 iOS 打包说明见
+[`flutter_app/README.md`](flutter_app/README.md)。Nginx 配置示例位于
+[`flutter_app/deploy/nginx.conf.example`](flutter_app/deploy/nginx.conf.example)。
+
+快速构建：
+
+Flutter 客户端默认请求正式 API `https://ccopy.cloud123.uk:333`。如需本地开发，使用
+`--dart-define=API_MODE=local`；Android 模拟器的本地地址应使用 `10.0.2.2`，详见
+[`flutter_app/README.md`](flutter_app/README.md)。
+
+```bash
+cd flutter_app
+# 默认正式 API
+flutter build web --release
+flutter build apk --release
+flutter build appbundle --release
+
+# Android 模拟器切换到本地 API
+flutter build apk --debug \
+  --dart-define=API_MODE=local \
+  --dart-define=LOCAL_API_BASE_URL=http://10.0.2.2:8787
+```
+
+客户端已对接当前后端的私有文件访问凭据：文本和图片可在客户端内预览，办公文档可调用后端 PDF 预览，其他文件可打开签名地址或下载。签名 URL 只在内存中使用，不会写入本地持久化存储。完整说明见 [`flutter_app/README.md`](flutter_app/README.md) 的“私有文件预览与下载”章节。
 
 ## 本地开发
 

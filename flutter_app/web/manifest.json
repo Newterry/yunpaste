@@ -1,0 +1,35 @@
+{
+    "name": "云粘贴",
+    "short_name": "云粘贴",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F7F7F3",
+    "theme_color": "#356B5D",
+    "description": "云粘贴跨平台客户端：安全管理你的文件与粘贴内容。",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

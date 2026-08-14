@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Local development only. Release builds intentionally require HTTPS. -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

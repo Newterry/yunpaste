@@ -76,6 +76,42 @@ describe("文件管理器、账号生命周期与 WebDAV 浏览边界", { concur
     assert(search.data.files.some((file) => file.name === "project-plan.txt"));
   });
 
+  it("永久删除文件夹时同时删除目录树内的文件记录", async () => {
+    const owner = await registerUser(server, { email: "folder-delete-owner@example.test" });
+    const root = await server.requestJson("/api/folders", {
+      method: "POST", token: owner.data.token, json: { name: "待删除目录" }
+    });
+    assert.equal(root.status, 201, root.text);
+    const child = await server.requestJson("/api/folders", {
+      method: "POST",
+      token: owner.data.token,
+      json: { name: "子目录", parentId: root.data.folder.id }
+    });
+    assert.equal(child.status, 201, child.text);
+    const paste = await server.requestJson("/api/files/paste", {
+      method: "POST",
+      token: owner.data.token,
+      json: {
+        title: "orphan-check",
+        content: "must be removed with folder",
+        format: "text",
+        folderId: child.data.folder.id
+      }
+    });
+    assert.equal(paste.status, 201, paste.text);
+
+    const deleted = await server.requestJson(`/api/folders/${root.data.folder.id}`, {
+      method: "DELETE", token: owner.data.token
+    });
+    assert.equal(deleted.status, 200, deleted.text);
+
+    const search = await server.requestJson("/api/files?q=orphan-check", {
+      token: owner.data.token
+    });
+    assert.equal(search.status, 200, search.text);
+    assert.equal(search.data.fileTotal, 0);
+  });
+
   it("用户可修改邮箱和注销自己，管理员可删除其他账号", async () => {
     const member = await registerUser(server, { email: "old-email@example.test", password: "Member-Test-2026" });
     const changed = await server.requestJson("/api/profile", {

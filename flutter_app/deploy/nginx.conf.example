@@ -1,0 +1,52 @@
+# 云粘贴 Flutter Web/H5 部署示例
+#
+# 目录约定：
+#   1. 将 flutter_app/build/web 的内容发布到 /var/www/yunpaste-web
+#   2. 现有 Express 后端监听 127.0.0.1:8787
+#   3. 将 paste.example.com 替换为实际域名，并在外层配置 HTTPS 证书
+#
+# Flutter Web 与 API 使用同源地址，避免后端未启用 CORS 时被浏览器拦截。
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name paste.example.com;
+
+    root /var/www/yunpaste-web;
+    index index.html;
+
+    # 后端允许较大的文件上传；请按实例的 maxUploadMb 和网关策略调整。
+    client_max_body_size 2048m;
+
+    # Express API、文件预览和分享下载均由现有后端处理。
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_request_buffering off;
+        proxy_read_timeout 1800s;
+        proxy_send_timeout 1800s;
+    }
+
+    # 可选：让健康检查绕过 Flutter 静态文件。
+    location = /livez {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Flutter 路由（/login、/files、/share/:token 等）需要回退到 index.html。
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+
+    # Flutter 的带 hash 静态资源可以长期缓存；index.html 保持短缓存。
+    location ~* \.(?:js|css|wasm|png|jpg|jpeg|gif|svg|ico|webp|woff2?)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+}

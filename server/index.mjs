@@ -1396,6 +1396,12 @@ app.delete("/api/folders/:id", auth, async (req, res) => {
   if (results.some((result) => result.status === "rejected")) {
     return res.status(503).json({ error: "部分文件暂时无法从存储中删除，请稍后重试" });
   }
+  // `files.folder_id` was added after the original folders table and does not
+  // have a foreign-key cascade. Delete the file rows explicitly before
+  // removing the folder tree, otherwise a permanent folder delete leaves
+  // orphaned file records in `/api/files` and in quota calculations.
+  db.prepare(`DELETE FROM files WHERE owner_id = ? AND folder_id IN (${placeholders})`)
+    .run(req.user.id, ...ids);
   db.prepare("DELETE FROM folders WHERE id = ? AND owner_id = ?").run(folder.id, req.user.id);
   res.json({ usage: getUserUsage(req.user.id) });
 });

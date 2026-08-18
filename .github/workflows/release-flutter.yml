@@ -564,7 +564,7 @@ jobs:
       TAG: ${{ needs.prepare.outputs.tag }}
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: release-assets
           merge-multiple: true
@@ -572,6 +572,10 @@ jobs:
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          # This job intentionally does not check out the repository. Tell gh
+          # which repository to operate on instead of relying on a local git
+          # remote, which is unavailable after downloading only the artifacts.
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -582,10 +586,13 @@ jobs:
             exit 1
           fi
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${assets[@]}" --clobber
+          repo="$GITHUB_REPOSITORY"
+          echo "Publishing ${#assets[@]} asset(s) to $repo:$TAG"
+          if gh release view "$TAG" --repo "$repo" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${assets[@]}" --repo "$repo" --clobber
           else
             gh release create "$TAG" "${assets[@]}" \
+              --repo "$repo" \
               --title "云粘贴 $TAG" \
               --generate-notes \
               --verify-tag

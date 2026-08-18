@@ -305,8 +305,8 @@ open ios/Runner.xcworkspace
 
 ### 首次配置 Android 签名 Secrets
 
-正式 APK/AAB 不允许使用 Debug 签名。进入 GitHub 仓库的 **Settings → Secrets and variables → Actions**，新增以下
-Repository secrets：
+正式 APK/AAB 应使用固定的 Android keystore。进入 GitHub 仓库的
+**Settings → Secrets and variables → Actions**，新增以下 Repository secrets：
 
 | Secret | 内容 |
 | --- | --- |
@@ -323,6 +323,11 @@ base64 -i upload-keystore.jks | pbcopy
 
 然后把剪贴板内容粘贴到 `ANDROID_KEYSTORE_BASE64`。Workflow 会在临时 runner 中生成
 `flutter_app/android/key.properties` 和 keystore，构建结束后 runner 会销毁；这两个文件仍然不会进入 Git。
+
+如果这四个 Secrets 尚未配置，Workflow 默认会生成一个**临时 CI 签名 key**，这样 H5、Windows、Android
+等其他平台仍然可以完成并发布到 Release。临时签名的 APK/AAB 只适合安装、验收和下载测试，不能上传到
+Google Play，也不能保证后续版本可以覆盖更新。配置固定 keystore 后，Workflow 会自动改用正式签名；如需
+强制未配置 Secrets 时直接失败，可把 workflow 顶层的 `ALLOW_EPHEMERAL_ANDROID_SIGNING` 改为 `false`。
 
 ### 发版方式
 

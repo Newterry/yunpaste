@@ -23,6 +23,12 @@ permissions:
 env:
   FLUTTER_VERSION: '3.35.6'
   PRODUCTION_API_BASE_URL: 'https://ccopy.cloud123.uk:333'
+  # Keep the release pipeline useful before the repository's permanent Android
+  # signing secrets have been configured. When this is true and the four
+  # ANDROID_* secrets are absent, the Android job creates a temporary CI key.
+  # The resulting APK/AAB can be installed or inspected, but it must not be
+  # uploaded to Google Play and cannot be used for stable app updates.
+  ALLOW_EPHEMERAL_ANDROID_SIGNING: 'true'
 
 jobs:
   prepare:
@@ -177,7 +183,7 @@ jobs:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -193,7 +199,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Configure Android release signing
+      - name: Configure Android signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -203,24 +209,60 @@ jobs:
         run: |
           set -euo pipefail
 
+          secrets_complete=true
           for variable in \
             ANDROID_KEYSTORE_BASE64 \
             ANDROID_KEY_ALIAS \
             ANDROID_KEY_PASSWORD \
             ANDROID_STORE_PASSWORD; do
             if [[ -z "${!variable}" ]]; then
-              echo "Missing required GitHub Actions secret: $variable" >&2
-              exit 1
+              secrets_complete=false
             fi
           done
 
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          cat > android/key.properties <<PROPERTIES
+          if [[ "$secrets_complete" == true ]]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+            cat > android/key.properties <<PROPERTIES
           storePassword=$ANDROID_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           storeFile=upload-keystore.jks
           PROPERTIES
+            echo 'ANDROID_SIGNING_MODE=repository' >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [[ "$ALLOW_EPHEMERAL_ANDROID_SIGNING" != true ]]; then
+            echo 'Android signing secrets are incomplete and temporary signing is disabled.' >&2
+            echo 'Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, and ANDROID_STORE_PASSWORD.' >&2
+            exit 1
+          fi
+
+          echo '::warning::Android signing secrets are incomplete; generating a temporary CI signing key. Configure permanent secrets before Google Play distribution.'
+          temporary_password="$(openssl rand -hex 24)"
+          keytool -genkeypair -v \
+            -keystore android/ci-release-keystore.jks \
+            -storetype JKS \
+            -storepass "$temporary_password" \
+            -keypass "$temporary_password" \
+            -alias yunpaste-ci \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname 'CN=YunPaste CI, OU=CI, O=YunPaste, C=CN' >/dev/null
+          cat > android/key.properties <<PROPERTIES
+          storePassword=$temporary_password
+          keyPassword=$temporary_password
+          keyAlias=yunpaste-ci
+          storeFile=ci-release-keystore.jks
+          PROPERTIES
+          echo 'ANDROID_SIGNING_MODE=ephemeral' >> "$GITHUB_ENV"
+          {
+            echo '### Android signing'
+            echo
+            echo 'This run used a temporary CI signing key because the permanent Android signing secrets are not configured.'
+            echo 'The APK/AAB is suitable for installation and inspection only; configure the four ANDROID_* secrets before Google Play distribution or upgrade releases.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build signed APK
         run: >-
@@ -314,7 +356,9 @@ jobs:
     needs:
       - prepare
       - flutter-quality
-    runs-on: windows-latest
+    # Pin the Visual Studio image instead of following a moving
+    # windows-latest alias. This keeps the Flutter 3.35 toolchain stable.
+    runs-on: windows-2022
     timeout-minutes: 45
     env:
       TAG: ${{ needs.prepare.outputs.tag }}
@@ -339,19 +383,101 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Enable Windows desktop support
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          flutter config --enable-windows-desktop
+
+      - name: Repair Windows plugin links
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Flutter's Windows CMake file resolves native plugins through
+          # windows/flutter/ephemeral/.plugin_symlinks. Hosted Windows images
+          # can occasionally fail to create those links, leaving CMake with
+          # "add_subdirectory ... is not an existing directory" errors. A
+          # directory junction is sufficient for CMake and works without
+          # relying on Developer Mode or a particular filesystem.
+          $pluginLinkRoot = Join-Path $PWD 'windows/flutter/ephemeral/.plugin_symlinks'
+          $generatedPlugins = Join-Path $PWD 'windows/flutter/generated_plugins.cmake'
+          $packageConfigPath = Join-Path $PWD '.dart_tool/package_config.json'
+
+          if (-not (Test-Path $generatedPlugins)) {
+            throw "Flutter did not generate $generatedPlugins"
+          }
+          if (-not (Test-Path $packageConfigPath)) {
+            throw "Flutter package configuration not found: $packageConfigPath"
+          }
+
+          $packageConfig = Get-Content $packageConfigPath -Raw | ConvertFrom-Json
+          $cmake = Get-Content $generatedPlugins -Raw
+          $pluginNames = [regex]::Matches($cmake, '(?m)^\s{2}([A-Za-z0-9_]+)\s*$') |
+            ForEach-Object { $_.Groups[1].Value } |
+            Select-Object -Unique
+
+          New-Item -ItemType Directory -Force -Path $pluginLinkRoot | Out-Null
+
+          foreach ($pluginName in $pluginNames) {
+            $linkPath = Join-Path $pluginLinkRoot $pluginName
+            $cmakePath = Join-Path $linkPath 'windows/CMakeLists.txt'
+            if (Test-Path $cmakePath) {
+              continue
+            }
+
+            $existing = Get-Item -Force -LiteralPath $linkPath -ErrorAction SilentlyContinue
+            if ($null -ne $existing) {
+              # Do not recurse through a junction/symlink: that could delete
+              # the package cache target instead of only the broken link.
+              if (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                Remove-Item -Force -LiteralPath $linkPath
+              } else {
+                Remove-Item -Force -Recurse -LiteralPath $linkPath
+              }
+            }
+
+            $package = $packageConfig.packages |
+              Where-Object { $_.name -eq $pluginName } |
+              Select-Object -First 1
+            if ($null -eq $package) {
+              throw "Flutter plugin '$pluginName' is missing from package_config.json"
+            }
+
+            $packageRoot = ([Uri]$package.rootUri).LocalPath
+            if (-not (Test-Path (Join-Path $packageRoot 'windows/CMakeLists.txt'))) {
+              throw "Flutter plugin '$pluginName' has no Windows implementation at $packageRoot"
+            }
+
+            New-Item -ItemType Junction -Path $linkPath -Target $packageRoot | Out-Null
+            Write-Host "Created Windows plugin junction: $pluginName -> $packageRoot"
+          }
+
+          foreach ($pluginName in $pluginNames) {
+            $cmakePath = Join-Path $pluginLinkRoot "$pluginName/windows/CMakeLists.txt"
+            if (-not (Test-Path $cmakePath)) {
+              throw "Windows plugin link is still missing: $cmakePath"
+            }
+          }
+
       - name: Build Windows app
-        run: >-
-          flutter build windows --release
-          --build-name="$env:VERSION"
-          --build-number="$env:BUILD_NUMBER"
-          --dart-define=API_BASE_URL="$env:PRODUCTION_API_BASE_URL"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          flutter build windows --release `
+            "--build-name=$env:VERSION" `
+            "--build-number=$env:BUILD_NUMBER" `
+            "--dart-define=API_BASE_URL=$env:PRODUCTION_API_BASE_URL"
 
       - name: Package Windows app
         shell: pwsh
         run: |
-          $releaseDir = Join-Path $PWD 'build/windows/x64/runner/Release'
-          if (-not (Test-Path $releaseDir)) {
-            throw "Windows release directory not found: $releaseDir"
+          $releaseDir = @(
+            (Join-Path $PWD 'build/windows/x64/runner/Release'),
+            (Join-Path $PWD 'build/windows/runner/Release')
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($releaseDir)) {
+            throw "Windows release directory not found under $PWD/build/windows"
           }
           New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
           Compress-Archive -Path (Join-Path $releaseDir '*') `

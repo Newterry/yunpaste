@@ -5,7 +5,8 @@
 ## Unreleased
 
 - 新增 Flutter GitHub Actions 自动发版流程：推送 `vMAJOR.MINOR.PATCH` 标签后自动构建 H5、Android、macOS、Windows 和未签名 iOS 产物，并发布到 GitHub Release。
-- Android Release 构建通过 GitHub Secrets 注入 keystore，不在仓库保存签名文件和密码。
+- Android Release 构建优先通过 GitHub Secrets 注入固定 keystore；Secrets 尚未配置时使用临时 CI key，避免其他平台构建完成后因 Android 配置缺失而无法发布 Release。
+- 固定 Windows runner 版本并补齐 Flutter 原生插件链接，降低 Windows hosted runner 的 CMake 构建失败概率。
 
 ## 1.15.0
 

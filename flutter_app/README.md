@@ -292,6 +292,65 @@ open ios/Runner.xcworkspace
 
 发版时请同时更新版本号和项目根目录的变更记录。
 
+## GitHub Actions 自动构建与 Release
+
+仓库已提供 `.github/workflows/release-flutter.yml`。当推送稳定版本标签
+`vMAJOR.MINOR.PATCH`（例如 `v1.15.1`）时，GitHub Actions 会自动：
+
+- 使用固定的 Flutter `3.35.6` 构建 H5、Android APK、Android App Bundle、macOS、Windows；
+- 构建一个**未签名**的 iOS `.app` 压缩包，供工程检查或后续签名使用；
+- 将所有产物上传为临时 Actions artifact；
+- 自动创建或更新同名 GitHub Release，并把产物作为 Release 附件；
+- 同一个版本标签还会触发现有的 Docker 镜像发布 workflow。
+
+### 首次配置 Android 签名 Secrets
+
+正式 APK/AAB 不允许使用 Debug 签名。进入 GitHub 仓库的 **Settings → Secrets and variables → Actions**，新增以下
+Repository secrets：
+
+| Secret | 内容 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `upload-keystore.jks` 的 Base64 内容 |
+| `ANDROID_KEY_ALIAS` | keystore 中的 alias |
+| `ANDROID_KEY_PASSWORD` | alias 密码 |
+| `ANDROID_STORE_PASSWORD` | keystore 密码 |
+
+可以在 macOS 本地生成 Base64 内容（不要把 keystore 或密码提交到 Git）：
+
+```bash
+base64 -i upload-keystore.jks | pbcopy
+```
+
+然后把剪贴板内容粘贴到 `ANDROID_KEYSTORE_BASE64`。Workflow 会在临时 runner 中生成
+`flutter_app/android/key.properties` 和 keystore，构建结束后 runner 会销毁；这两个文件仍然不会进入 Git。
+
+### 发版方式
+
+推荐先更新 `flutter_app/pubspec.yaml` 的版本号和 `CHANGELOG.md`，再创建并推送标签：
+
+```bash
+git tag v1.15.1
+git push origin v1.15.1
+```
+
+也可以在 GitHub 的 **Actions → Release Flutter client → Run workflow** 手动输入一个**已经推送到远程仓库**的稳定版本标签。
+Workflow 会检出该标签对应的提交并创建 Release；标签必须是 `v1.2.3` 这样的三段式稳定版本号，不能直接使用
+`v1.2.3-beta.1`。
+
+### 当前 Release 附件
+
+| 附件 | 说明 |
+| --- | --- |
+| `yunpaste-web-v*.tar.gz` | H5 静态文件，解压后部署 `web/` 目录 |
+| `yunpaste-android-v*.apk` | 可直接安装的 Android APK |
+| `yunpaste-android-v*.aab` | Google Play 使用的 Android App Bundle |
+| `yunpaste-macos-v*.zip` | macOS 应用包，当前未接入 Apple 公证/签名 |
+| `yunpaste-windows-v*.zip` | Windows 应用包 |
+| `yunpaste-ios-v*-unsigned.zip` | 未签名 iOS `.app`，不能直接提交 App Store |
+
+iOS 要生成可安装 IPA 或提交 TestFlight，还需要另外配置 Apple Developer 证书、Provisioning Profile、App Store
+Connect API Key，并把签名流程加入 macOS runner；当前 workflow 刻意只做 `--no-codesign` 构建，避免把 Apple 私钥放入仓库。
+
 ## 重要安全说明
 
 - 不要把 JWT、keystore、Apple 证书、Provisioning Profile 或密码提交到 Git。

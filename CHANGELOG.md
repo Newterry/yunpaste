@@ -2,6 +2,11 @@
 
 本项目遵循语义化版本的基本原则，版本号与 Docker 镜像标签保持一致。
 
+## Unreleased
+
+- 新增 Flutter GitHub Actions 自动发版流程：推送 `vMAJOR.MINOR.PATCH` 标签后自动构建 H5、Android、macOS、Windows 和未签名 iOS 产物，并发布到 GitHub Release。
+- Android Release 构建通过 GitHub Secrets 注入 keystore，不在仓库保存签名文件和密码。
+
 ## 1.15.0
 
 - 新增独立 Flutter 客户端，复用现有 Express 后端并支持 H5、Android 与 iOS 工程构建。

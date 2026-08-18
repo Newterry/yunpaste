@@ -653,6 +653,8 @@ flutter build apk --debug \
   --dart-define=LOCAL_API_BASE_URL=http://10.0.2.2:8787
 ```
 
+推送形如 `v1.15.1` 的版本标签后，`.github/workflows/release-flutter.yml` 会自动构建 Flutter 各平台产物并创建 GitHub Release；首次发版前需要配置 Android 签名 Secrets，详见 [`flutter_app/README.md`](flutter_app/README.md) 的“GitHub Actions 自动构建与 Release”章节。
+
 客户端已对接当前后端的私有文件访问凭据：文本和图片可在客户端内预览，办公文档可调用后端 PDF 预览，其他文件可打开签名地址或下载。签名 URL 只在内存中使用，不会写入本地持久化存储。完整说明见 [`flutter_app/README.md`](flutter_app/README.md) 的“私有文件预览与下载”章节。
 
 ## 本地开发

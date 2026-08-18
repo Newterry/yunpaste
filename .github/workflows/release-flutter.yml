@@ -1,0 +1,466 @@
+name: Release Flutter client
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, for example v1.15.1 (stable semver only)'
+        required: true
+        type: string
+        default: 'v1.15.0'
+
+concurrency:
+  group: flutter-release-${{ github.ref }}
+  cancel-in-progress: false
+
+# The default token is read-only. Only the publish job receives contents: write.
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.35.6'
+  PRODUCTION_API_BASE_URL: 'https://ccopy.cloud123.uk:333'
+
+jobs:
+  prepare:
+    name: Prepare release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      build_number: ${{ steps.release.outputs.build_number }}
+      checkout_ref: ${{ steps.release.outputs.checkout_ref }}
+    steps:
+      - name: Validate release tag
+        id: release
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]]; then
+            tag="$REQUESTED_TAG"
+            checkout_ref="$tag"
+          else
+            tag="$GITHUB_REF_NAME"
+            checkout_ref="$tag"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must match vMAJOR.MINOR.PATCH, got: $tag" >&2
+            exit 1
+          fi
+
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]] && \
+             ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Manual release requires an existing remote tag: $tag" >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          # Flutter maps this value to Android versionCode and iOS CFBundleVersion.
+          # GitHub run numbers are monotonically increasing within this workflow.
+          build_number="$GITHUB_RUN_NUMBER"
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "build_number=$build_number"
+            echo "checkout_ref=$checkout_ref"
+          } >> "$GITHUB_OUTPUT"
+
+  flutter-quality:
+    name: Flutter analyze and test
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  build-web:
+    name: Build H5
+    needs:
+      - prepare
+      - flutter-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build H5
+        run: >-
+          flutter build web --release
+          --build-name="$VERSION"
+          --build-number="$BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$PRODUCTION_API_BASE_URL"
+
+      - name: Package H5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          tar -czf "dist/yunpaste-web-${TAG}.tar.gz" -C build web
+
+      - name: Upload H5 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: yunpaste-web-${{ needs.prepare.outputs.tag }}
+          path: flutter_app/dist/yunpaste-web-*.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  build-android:
+    name: Build Android APK and AAB
+    needs:
+      - prepare
+      - flutter-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Configure Android release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for variable in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD \
+            ANDROID_STORE_PASSWORD; do
+            if [[ -z "${!variable}" ]]; then
+              echo "Missing required GitHub Actions secret: $variable" >&2
+              exit 1
+            fi
+          done
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          cat > android/key.properties <<PROPERTIES
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=upload-keystore.jks
+          PROPERTIES
+
+      - name: Build signed APK
+        run: >-
+          flutter build apk --release
+          --build-name="$VERSION"
+          --build-number="$BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$PRODUCTION_API_BASE_URL"
+
+      - name: Build signed App Bundle
+        run: >-
+          flutter build appbundle --release
+          --build-name="$VERSION"
+          --build-number="$BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$PRODUCTION_API_BASE_URL"
+
+      - name: Rename Android artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "dist/yunpaste-android-${TAG}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab \
+            "dist/yunpaste-android-${TAG}.aab"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: yunpaste-android-${{ needs.prepare.outputs.tag }}
+          path: flutter_app/dist/yunpaste-android-*
+          if-no-files-found: error
+          retention-days: 14
+
+  build-macos:
+    name: Build macOS
+    needs:
+      - prepare
+      - flutter-quality
+    runs-on: macos-14
+    timeout-minutes: 45
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS app
+        run: >-
+          flutter build macos --release
+          --build-name="$VERSION"
+          --build-number="$BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$PRODUCTION_API_BASE_URL"
+
+      - name: Package macOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          app_path="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" \
+            "dist/yunpaste-macos-${TAG}.zip"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: yunpaste-macos-${{ needs.prepare.outputs.tag }}
+          path: flutter_app/dist/yunpaste-macos-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    name: Build Windows
+    needs:
+      - prepare
+      - flutter-quality
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        run: >-
+          flutter build windows --release
+          --build-name="$env:VERSION"
+          --build-number="$env:BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$env:PRODUCTION_API_BASE_URL"
+
+      - name: Package Windows app
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $PWD 'build/windows/x64/runner/Release'
+          if (-not (Test-Path $releaseDir)) {
+            throw "Windows release directory not found: $releaseDir"
+          }
+          New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
+          Compress-Archive -Path (Join-Path $releaseDir '*') `
+            -DestinationPath (Join-Path $PWD "dist/yunpaste-windows-$env:TAG.zip") `
+            -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: yunpaste-windows-${{ needs.prepare.outputs.tag }}
+          path: flutter_app/dist/yunpaste-windows-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-ios-unsigned:
+    name: Build iOS (unsigned)
+    needs:
+      - prepare
+      - flutter-quality
+    runs-on: macos-14
+    timeout-minutes: 45
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build unsigned iOS app
+        run: >-
+          flutter build ios --release --no-codesign
+          --build-name="$VERSION"
+          --build-number="$BUILD_NUMBER"
+          --dart-define=API_BASE_URL="$PRODUCTION_API_BASE_URL"
+
+      - name: Package unsigned iOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          app_path="$(find build/ios/iphoneos -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" \
+            "dist/yunpaste-ios-${TAG}-unsigned.zip"
+
+      - name: Upload unsigned iOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: yunpaste-ios-${{ needs.prepare.outputs.tag }}-unsigned
+          path: flutter_app/dist/yunpaste-ios-*-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    name: Publish GitHub Release
+    needs:
+      - prepare
+      - build-web
+      - build-android
+      - build-macos
+      - build-windows
+      - build-ios-unsigned
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(release-assets/*)
+          if (( ${#assets[@]} == 0 )); then
+            echo 'No release assets were downloaded.' >&2
+            exit 1
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$TAG" "${assets[@]}" \
+              --title "云粘贴 $TAG" \
+              --generate-notes \
+              --verify-tag
+          fi

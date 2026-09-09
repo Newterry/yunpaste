@@ -5,12 +5,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { ThemeName } from "../types";
 import { useI18n } from "../lib/i18n";
+import { derivePasteTitle } from "../lib/fileNames";
 
-export function Modal({ children, onClose, label, returnFocus }: {
+export function Modal({ children, onClose, label, returnFocus, className = "" }: {
   children: React.ReactNode;
   onClose: () => void;
   label: string;
   returnFocus?: React.RefObject<HTMLElement | null>;
+  className?: string;
 }) {
   const layer = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -65,7 +67,7 @@ export function Modal({ children, onClose, label, returnFocus }: {
   return (
     <div ref={layer} className="modal-layer" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
       <button className="modal-scrim" onClick={onClose} aria-label="关闭" />
-      <div className="modal-card">{children}</div>
+      <div className={`modal-card ${className}`.trim()}>{children}</div>
     </div>
   );
 }
@@ -92,6 +94,7 @@ export function ContentModal({
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const standardExpiry = new Set(["1", "7", "30"]);
+  const suggestedTitle = derivePasteTitle(content);
   const chooseFiles = (incoming: File[]) => {
     setFiles(incoming.slice(0, maxFilesPerUpload));
   };
@@ -99,23 +102,51 @@ export function ContentModal({
     if (!files.length && !content.trim()) return;
     if (files.length && !(await onUpload(files))) return;
     if (content.trim() && !(await onCreate({
-      title: title || "未命名粘贴", content, format, expiresInDays: Number(expiry)
+      title: title.trim() || suggestedTitle, content, format, expiresInDays: Number(expiry)
     }))) return;
     onClose();
   };
   return (
-    <Modal onClose={onClose} label="添加内容" returnFocus={returnFocus}>
+    <Modal onClose={onClose} label="添加内容" returnFocus={returnFocus} className="content-modal">
       <div className="modal-header">
         <div><span className="modal-icon"><FolderUp /></span><div><h2>添加内容</h2><p>拖入文件或直接粘贴文本，一次完成。</p></div></div>
         <button className="icon-button" onClick={onClose} aria-label="关闭添加内容"><X /></button>
       </div>
       <div className="paste-form content-composer">
+        <section className="content-composer__text" aria-labelledby="content-text-title">
+          <div className="content-composer__heading"><FileText /><span><strong id="content-text-title">粘贴文字</strong><small>写下内容，文件名可自动生成</small></span></div>
+          <label>
+            <span>内容</span>
+            <textarea data-modal-initial value={content} onChange={(event) => setContent(event.target.value)} placeholder="在这里粘贴或输入内容…" />
+            <small>{content.length.toLocaleString()} 字符</small>
+          </label>
+          <label>
+            <span>文件名 <em>选填</em></span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="留空将使用文字的第一句话" />
+          </label>
+          {content.trim() && !title.trim() && (
+            <div className="content-name-preview"><Sparkles /><span>将保存为 <strong>{suggestedTitle}.{format === "markdown" ? "md" : "txt"}</strong></span></div>
+          )}
+          <div className="form-row">
+            <label>
+              <span>格式</span>
+              <span className="select-wrap"><select value={format} onChange={(event) => setFormat(event.target.value)}><option value="text">纯文本</option><option value="markdown">Markdown</option></select><ChevronDown /></span>
+            </label>
+            <label>
+              <span>有效期</span>
+              <span className="select-wrap"><select value={expiry} onChange={(event) => setExpiry(event.target.value)}>
+                {!standardExpiry.has(String(defaultExpiryDays)) && <option value={defaultExpiryDays}>{defaultExpiryDays} 天（系统默认）</option>}
+                <option value="1">1 天</option><option value="7">7 天</option><option value="30">30 天</option>
+              </select><ChevronDown /></span>
+            </label>
+          </div>
+        </section>
+        <div className="content-composer__divider"><span>还可以添加文件</span></div>
         <section className="content-composer__files" aria-labelledby="content-files-title">
-          <div className="content-composer__heading"><FolderUp /><span><strong id="content-files-title">上传文件</strong><small>拖拽或点击选择，可多选</small></span></div>
+          <div className="content-composer__heading"><FolderUp /><span><strong id="content-files-title">上传文件</strong><small>保留原文件名，支持拖拽和多选</small></span></div>
           <button
             type="button"
             className={`content-dropzone ${dragging ? "is-dragging" : ""}`}
-            data-modal-initial
             onClick={() => fileInput.current?.click()}
             onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
             onDragOver={(event) => event.preventDefault()}
@@ -143,32 +174,6 @@ export function ContentModal({
               <button className="button button--ghost" onClick={() => setFiles([])}>清除</button>
             </div>
           )}
-        </section>
-        <div className="content-composer__divider"><span>也可以粘贴文本</span></div>
-        <section className="content-composer__text" aria-labelledby="content-text-title">
-          <div className="content-composer__heading"><FileText /><span><strong id="content-text-title">粘贴文本</strong><small>留空即可只上传文件</small></span></div>
-          <label>
-            <span>标题</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：会议记录" />
-          </label>
-          <label>
-            <span>内容</span>
-            <textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="在这里粘贴或输入内容…" />
-            <small>{content.length.toLocaleString()} 字符</small>
-          </label>
-          <div className="form-row">
-            <label>
-              <span>格式</span>
-              <span className="select-wrap"><select value={format} onChange={(event) => setFormat(event.target.value)}><option value="text">纯文本</option><option value="markdown">Markdown</option></select><ChevronDown /></span>
-            </label>
-            <label>
-              <span>有效期</span>
-              <span className="select-wrap"><select value={expiry} onChange={(event) => setExpiry(event.target.value)}>
-                {!standardExpiry.has(String(defaultExpiryDays)) && <option value={defaultExpiryDays}>{defaultExpiryDays} 天（系统默认）</option>}
-                <option value="1">1 天</option><option value="7">7 天</option><option value="30">30 天</option>
-              </select><ChevronDown /></span>
-            </label>
-          </div>
         </section>
         <div className="secure-note"><ShieldCheck /><span><strong>默认私有 · 文件保留 {defaultExpiryDays} 天</strong>收藏后永久保留；未收藏内容到期自动清理。</span></div>
       </div>

@@ -211,6 +211,19 @@ function cleanFileName(input, fallback = "未命名文件") {
   return value.slice(0, 180) || fallback;
 }
 
+function pasteTitleFromContent(content, fallback = "未命名粘贴") {
+  const firstLine = String(content || "").split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "";
+  const normalized = firstLine
+    .replace(/^(?:#{1,6}\s+|[-*+]\s+|\d+[.)、]\s*)/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const boundary = normalized.search(/[。！？!?]|\.(?=\s|$)/);
+  const firstSentence = (boundary >= 0 ? normalized.slice(0, boundary) : normalized)
+    .replace(/[。！？!?.,，；;：:]+$/g, "")
+    .trim();
+  return cleanFileName([...firstSentence].slice(0, 80).join(""), fallback);
+}
+
 function fileMime(file) {
   const inferred = mime.lookup(file.originalname || file.name);
   const declared = String(file.mimetype || file.mime || "").toLowerCase();
@@ -1537,9 +1550,9 @@ app.post("/api/files/paste", auth, async (req, res, next) => {
   ) {
     return res.status(400).json({ error: "粘贴内容格式不正确" });
   }
-  const title = cleanFileName(req.body?.title, "未命名粘贴");
   const content = req.body.content;
   if (!content.trim()) return res.status(400).json({ error: "粘贴内容不能为空" });
+  const title = cleanFileName(req.body?.title, pasteTitleFromContent(content));
 
   const size = Buffer.byteLength(content);
   if (getUserUsage(req.user.id) + size > Number(req.user.quota)) {

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'core/config/app_config.dart';
 import 'core/utils/clipboard_utils.dart';
+import 'core/utils/file_name_utils.dart';
 import 'data/models/models.dart';
 import 'data/models/server_settings.dart';
 import 'data/services/yunpaste_api.dart';
@@ -993,15 +994,15 @@ class _FileBrowserScreenState extends ConsumerState<FileBrowserScreen> {
           : '当前文件夹：${state.breadcrumbs.lastOrNull?.name ?? ''}',
       actions: [
         FilledButton.icon(
-          onPressed: state.busy ? null : () => pickAndUpload(context, ref),
-          icon: const Icon(Icons.upload_file_rounded),
-          label: const Text('上传'),
-        ),
-        const SizedBox(width: 10),
-        OutlinedButton.icon(
           onPressed: state.busy ? null : () => showPasteDialog(context, ref),
           icon: const Icon(Icons.edit_note_rounded),
           label: const Text('新建粘贴'),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton.icon(
+          onPressed: state.busy ? null : () => pickAndUpload(context, ref),
+          icon: const Icon(Icons.upload_file_rounded),
+          label: const Text('上传文件'),
         ),
       ],
       child: Column(
@@ -2485,7 +2486,7 @@ class _PrivateFileDialogState extends State<PrivateFileDialog> {
 }
 
 Future<void> showPasteDialog(BuildContext context, WidgetRef ref) async {
-  final titleController = TextEditingController(text: '未命名粘贴');
+  final titleController = TextEditingController();
   final contentController = TextEditingController();
   var format = 'text';
   final submitted = await showDialog<bool>(
@@ -2500,7 +2501,14 @@ Future<void> showPasteDialog(BuildContext context, WidgetRef ref) async {
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: '标题'),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: '文件名（选填）',
+                  helperText: titleController.text.trim().isEmpty &&
+                          contentController.text.trim().isNotEmpty
+                      ? '将保存为 ${derivePasteTitle(contentController.text)}.${format == 'markdown' ? 'md' : 'txt'}'
+                      : '留空将使用文字的第一句话',
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -2517,6 +2525,7 @@ Future<void> showPasteDialog(BuildContext context, WidgetRef ref) async {
               const SizedBox(height: 12),
               TextField(
                 controller: contentController,
+                onChanged: (_) => setState(() {}),
                 minLines: 6,
                 maxLines: 12,
                 decoration: const InputDecoration(
@@ -2576,7 +2585,10 @@ Future<void> showPasteDialog(BuildContext context, WidgetRef ref) async {
     await ref
         .read(appControllerProvider.notifier)
         .createPaste(
-          title: titleController.text,
+          title: derivePasteTitle(
+            contentController.text,
+            customTitle: titleController.text,
+          ),
           content: contentController.text,
           format: format,
         );

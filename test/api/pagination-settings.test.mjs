@@ -37,6 +37,39 @@ describe("分页与动态系统设置", { concurrency: false }, () => {
     await cleanupTestDataDir(dataDir);
   });
 
+  it("未填写文件名时使用文字第一句话，上传文件保留原文件名", async () => {
+    const created = await server.requestJson("/api/files/paste", {
+      method: "POST",
+      token: member.token,
+      json: {
+        title: "   ",
+        content: "第一句话决定文件名。第二句话不会进入文件名。",
+        format: "text"
+      }
+    });
+    assert.equal(created.status, 201, created.text);
+    assert.equal(created.data.file.name, "第一句话决定文件名.txt");
+
+    const markdown = await server.requestJson("/api/files/paste", {
+      method: "POST",
+      token: member.token,
+      json: {
+        content: "# 发布说明\n这里是正文",
+        format: "markdown"
+      }
+    });
+    assert.equal(markdown.status, 201, markdown.text);
+    assert.equal(markdown.data.file.name, "发布说明.md");
+
+    const uploaded = await server.upload(member.token, {
+      name: "原始文件名.txt",
+      type: "text/plain",
+      bytes: Buffer.from("keep the original upload name")
+    });
+    assert.equal(uploaded.status, 201, uploaded.text);
+    assert.equal(uploaded.data.files[0].name, "原始文件名.txt");
+  });
+
   it("分页结果完整、无重复并具有稳定顺序", async () => {
     const prefix = `page-${crypto.randomUUID().slice(0, 8)}`;
     const createdIds = [];

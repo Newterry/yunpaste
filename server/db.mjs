@@ -25,10 +25,11 @@ db.exec(`
   PRAGMA busy_timeout = 5000;
   PRAGMA synchronous = NORMAL;
   PRAGMA temp_store = MEMORY;
+  PRAGMA cache_size = -32768;
   PRAGMA journal_size_limit = 67108864;
 `);
 
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 15;
 export const DEFAULT_USER_QUOTA = 20 * 1024 * 1024 * 1024;
 
 function migrationUsername(row, used) {
@@ -386,6 +387,21 @@ function migrate() {
       }
     }
 
+    if (current < 15) {
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_files_owner_folder_state_updated
+          ON files(owner_id, folder_id, is_trashed, updated_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_files_owner_state_size
+          ON files(owner_id, is_trashed, size, id);
+        CREATE INDEX IF NOT EXISTS idx_files_owner_favorite_updated
+          ON files(owner_id, is_trashed, is_favorite, updated_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_files_owner_shared_updated
+          ON files(owner_id, is_trashed, is_shared, updated_at DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS idx_folders_owner_parent_state_name
+          ON folders(owner_id, parent_id, is_trashed, name COLLATE NOCASE, id);
+      `);
+    }
+
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     db.exec("COMMIT");
   } catch (error) {
@@ -395,6 +411,7 @@ function migrate() {
 }
 
 migrate();
+db.exec("PRAGMA optimize");
 
 const now = () => new Date().toISOString();
 const isProduction = process.env.NODE_ENV === "production";

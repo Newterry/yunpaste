@@ -65,7 +65,46 @@ const officePreviewExtensions = new Set([
   ".odt", ".ods", ".odp", ".rtf", ".wps", ".et", ".dps", ".vsd", ".vsdx", ".pub"
 ]);
 const officePreviewConcurrency = Math.max(1, Math.min(4, Number(process.env.OFFICE_PREVIEW_CONCURRENCY) || 2));
+const officePreviewQueueLimit = Math.max(1, Math.min(64, Number(process.env.OFFICE_PREVIEW_QUEUE_LIMIT) || 16));
+const officePreviewQueueTimeoutMs = Math.max(
+  1_000,
+  Math.min(5 * 60_000, Number(process.env.OFFICE_PREVIEW_QUEUE_TIMEOUT_MS) || 30_000)
+);
 let activeOfficePreviews = 0;
+const officePreviewQueue = [];
+
+function acquireOfficePreviewSlot() {
+  if (activeOfficePreviews < officePreviewConcurrency) {
+    activeOfficePreviews += 1;
+    return Promise.resolve();
+  }
+  if (officePreviewQueue.length >= officePreviewQueueLimit) {
+    const error = new Error("文档预览排队人数过多，请稍后重试");
+    error.status = 429;
+    return Promise.reject(error);
+  }
+  return new Promise((resolve, reject) => {
+    const queued = { resolve, reject, timer: null };
+    queued.timer = setTimeout(() => {
+      const index = officePreviewQueue.indexOf(queued);
+      if (index >= 0) officePreviewQueue.splice(index, 1);
+      const error = new Error("文档预览排队超时，请稍后重试");
+      error.status = 503;
+      reject(error);
+    }, officePreviewQueueTimeoutMs);
+    queued.timer.unref?.();
+    officePreviewQueue.push(queued);
+  });
+}
+
+function releaseOfficePreviewSlot() {
+  activeOfficePreviews = Math.max(0, activeOfficePreviews - 1);
+  const queued = officePreviewQueue.shift();
+  if (!queued) return;
+  clearTimeout(queued.timer);
+  activeOfficePreviews += 1;
+  queued.resolve();
+}
 
 const trustProxy = process.env.TRUST_PROXY;
 if (trustProxy === "true") app.set("trust proxy", 1);
@@ -398,9 +437,9 @@ function storageBackendById(id) {
 }
 
 function reservedStorageBytes({ userId, excludeId } = {}) {
-  db.prepare("DELETE FROM storage_reservations WHERE expires_at <= ?").run(new Date().toISOString());
+  const nowIso = new Date().toISOString();
   const conditions = ["expires_at > ?"];
-  const values = [new Date().toISOString()];
+  const values = [nowIso];
   if (userId) {
     conditions.push("user_id = ?");
     values.push(userId);
@@ -1948,12 +1987,7 @@ function privateFileFromAccessToken(token) {
 }
 
 async function convertOfficePath(stagedPath, originalName) {
-  if (activeOfficePreviews >= officePreviewConcurrency) {
-    const error = new Error("文档预览服务繁忙，请稍后重试");
-    error.status = 503;
-    throw error;
-  }
-  activeOfficePreviews += 1;
+  await acquireOfficePreviewSlot();
   let workDir;
   try {
     workDir = await mkdtemp(join(tmpdir(), "yunpaste-office-"));
@@ -1985,7 +2019,7 @@ async function convertOfficePath(stagedPath, originalName) {
     if (workDir) await rm(workDir, { recursive: true, force: true }).catch(() => {});
     throw error;
   } finally {
-    activeOfficePreviews -= 1;
+    releaseOfficePreviewSlot();
   }
 }
 
@@ -3430,6 +3464,7 @@ function runMaintenance({ scanOrphans = false } = {}) {
     try {
       const settings = getSettings();
       const nowIso = new Date().toISOString();
+      db.prepare("DELETE FROM storage_reservations WHERE expires_at <= ?").run(nowIso);
       const trashCutoff = new Date(Date.now() - Number(settings.retentionDays) * 86_400_000).toISOString();
       let purged = 0;
       for (let batch = 0; batch < 10; batch += 1) {

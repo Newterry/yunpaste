@@ -63,7 +63,7 @@ test("旧版 schema 会在事务中迁移到当前版本", async () => {
       const columns = new Set(
         migrated.prepare("PRAGMA table_info(files)").all().map((column) => column.name)
       );
-      assert.equal(version, 14);
+      assert.equal(version, 15);
       assert.equal(columns.has("trashed_at"), true);
       assert.equal(columns.has("access_version"), true);
       assert.equal(columns.has("storage_backend_id"), true);
@@ -80,6 +80,10 @@ test("旧版 schema 会在事务中迁移到当前版本", async () => {
       );
       assert.equal(
         migrated.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_webdav_connections'").get().count,
+        1
+      );
+      assert.equal(
+        migrated.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'index' AND name = 'idx_files_owner_folder_state_updated'").get().count,
         1
       );
       assert.equal(
@@ -108,7 +112,7 @@ test("程序拒绝打开由更高版本创建的数据卷", async () => {
     future.close();
     await assert.rejects(
       startTieYun({ dataDir }),
-      /schema 版本 99 高于当前程序支持的 14/
+      /schema 版本 99 高于当前程序支持的 15/
     );
   } finally {
     await cleanupTestDataDir(dataDir);

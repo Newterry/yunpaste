@@ -2407,6 +2407,7 @@ svg {
   font-weight: 780;
   letter-spacing: -.065em;
   line-height: 1.08;
+  white-space: pre-line;
 }
 .auth-showcase__copy p {
   max-width: 470px;
@@ -2474,6 +2475,13 @@ svg {
 .auth-mode { margin-bottom: 28px; }
 .auth-form form { gap: 22px; }
 .auth-mobile-promise { display: none; }
+.auth-legal {
+  position: static;
+  justify-content: center;
+  margin-top: 20px;
+  transform: none;
+  white-space: normal;
+}
 .auth-language { border-color: #e5e1ef; background: rgb(255 255 255 / 86%); }
 
 @media (max-width: 1120px) and (min-width: 761px) {
@@ -2507,7 +2515,7 @@ svg {
   }
   .auth-mobile-brand { margin-bottom: 22px; }
   .auth-mobile-promise { display: flex; flex-direction: column; gap: 7px; margin: 0 -2px 27px; padding-bottom: 24px; border-bottom: 1px solid #ece8f3; }
-  .auth-mobile-promise > strong { color: #17233a; font-size: calc(25px * var(--font-scale)); letter-spacing: -.05em; line-height: 1.15; }
+  .auth-mobile-promise > strong { color: #17233a; font-size: calc(25px * var(--font-scale)); letter-spacing: -.05em; line-height: 1.15; white-space: pre-line; }
   .auth-mobile-promise > span { color: #6e7788; font-size: calc(12px * var(--font-scale)); line-height: 1.55; }
   .auth-mobile-promise > div { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; color: #4e596d; font-size: calc(9px * var(--font-scale)); font-weight: 650; }
   .auth-mobile-promise svg { width: 14px; height: 14px; color: #ff655f; }
@@ -3600,6 +3608,15 @@ svg {
 .file-card__share-expiry { display: block; margin-top: 3px; color: var(--indigo); font-size: calc(8px * var(--font-scale)); }
 .manager-more { position: relative; display: flex; justify-content: flex-end; }
 .manager-context { top: 34px; right: 0; z-index: 90; width: 190px; max-height: min(420px, calc(100vh - 120px)); overflow-y: auto; }
+.context-menu--pointer {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(190px, calc(100vw - 16px));
+  max-height: min(420px, calc(100dvh - 16px));
+  overflow-y: auto;
+  z-index: 200 !important;
+}
 .manager-list .manager-row:nth-last-child(-n + 4) .manager-context { top: auto; bottom: 34px; }
 .manager-card { z-index: 1; overflow: visible; content-visibility: visible; }
 .manager-card:focus-within,

@@ -18,7 +18,7 @@ const zhCN = {
   "preview.creator": "创建者", "preview.fileId": "文件 ID", "preview.policy": "存储策略", "preview.privateVolume": "私有持久化数据卷",
   "preview.shareLink": "共享链接", "preview.sharePublic": "任何拥有链接的人可查看", "preview.sharePrivate": "仅你自己可访问", "preview.shareExpiry": "分享有效期（最长 7 天）",
   "preview.textTruncated": "仅显示前 1 MB，下载文件可查看完整内容。",
-  "auth.hero": "一处复制，随处粘贴。", "auth.subtitle": "文件留在云端，手机无需安装额外 App。不主动下载，就不占手机文件空间。",
+  "auth.hero": "一处复制\n随处粘贴", "auth.subtitle": "文件留在云端，手机无需安装额外 App。不主动下载，就不占手机文件空间。",
   "auth.preview": "专业文件管理与预览", "auth.private": "私有部署与权限控制", "auth.responsive": "浏览器打开即用",
   "auth.zeroSpace": "不下载，不占手机空间", "auth.shareAnywhere": "一条链接分享给任何人", "auth.cloudManaged": "云端整理与预览",
   "auth.mobileSubtitle": "文件留在云端，手机轻装使用。", "auth.artworkAlt": "云粘贴让一处复制的文件在手机、平板和电脑之间随处使用",
@@ -36,7 +36,7 @@ const dictionaries: Record<AppLocale, Messages> = {
     "common.search": "搜尋檔案與內容", "common.list": "列表檢視", "common.grid": "網格檢視", "common.gallery": "圖片檢視", "common.open": "在新視窗開啟", "common.download": "下載", "common.copyLink": "複製連結", "common.copied": "已複製", "common.language": "介面語言", "common.add": "新增內容", "common.logout": "登出",
     "theme.title": "介面主題", "theme.subtitle": "選擇最適合你的工作氛圍。", "theme.done": "完成", "theme.autoFont": "字體大小會隨視窗自動縮放",
     "preview.title": "預覽", "preview.info": "資訊", "preview.activity": "活動", "preview.expand": "展開預覽", "preview.collapse": "收起預覽", "preview.copyText": "複製文字",
-    "auth.hero": "一處複製，隨處貼上。", "auth.subtitle": "檔案留在雲端，手機無需安裝額外 App。不主動下載，就不佔手機檔案空間。", "auth.preview": "專業檔案管理與預覽", "auth.responsive": "瀏覽器開啟即用", "auth.zeroSpace": "不下載，不佔手機空間", "auth.shareAnywhere": "一條連結分享給任何人", "auth.cloudManaged": "雲端整理與預覽", "auth.mobileSubtitle": "檔案留在雲端，手機輕裝使用。", "auth.artworkAlt": "雲粘貼讓一處複製的檔案在手機、平板和電腦之間隨處使用", "auth.welcome": "歡迎回來", "auth.account": "使用者名稱或電子郵件", "auth.password": "密碼", "auth.submit": "進入雲粘貼"
+    "auth.hero": "一處複製\n隨處貼上", "auth.subtitle": "檔案留在雲端，手機無需安裝額外 App。不主動下載，就不佔手機檔案空間。", "auth.preview": "專業檔案管理與預覽", "auth.responsive": "瀏覽器開啟即用", "auth.zeroSpace": "不下載，不佔手機空間", "auth.shareAnywhere": "一條連結分享給任何人", "auth.cloudManaged": "雲端整理與預覽", "auth.mobileSubtitle": "檔案留在雲端，手機輕裝使用。", "auth.artworkAlt": "雲粘貼讓一處複製的檔案在手機、平板和電腦之間隨處使用", "auth.welcome": "歡迎回來", "auth.account": "使用者名稱或電子郵件", "auth.password": "密碼", "auth.submit": "進入雲粘貼"
   },
   "en-US": {
     "nav.overview": "Overview", "nav.files": "My files", "nav.shared": "Shared links", "nav.favorites": "Favorites", "nav.webdav": "Personal WebDAV", "nav.tickets": "Tickets", "nav.trash": "Trash", "nav.profile": "Profile", "nav.admin": "Admin center",

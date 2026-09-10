@@ -8,6 +8,12 @@
 - Android Release 构建优先通过 GitHub Secrets 注入固定 keystore；Secrets 尚未配置时使用临时 CI key，避免其他平台构建完成后因 Android 配置缺失而无法发布 Release。
 - 固定 Windows runner 版本并补齐 Flutter 原生插件链接，降低 Windows hosted runner 的 CMake 构建失败概率。
 
+## 1.15.2
+
+- 修复 iPhone Safari 与主屏幕模式顶部安全区被挤进固定导航高度、导致状态栏和页面内容重叠的问题。
+- 顶部导航、侧栏、共享页和文件预览统一使用动态安全距离；iOS 主屏幕模式在系统未返回安全区时仍保留 54px 兜底。
+- PWA 静态缓存升级并强制检查新版服务工作线程，降低手机继续显示旧样式的概率。
+
 ## 1.15.1
 
 - 手机端预览面板完整适配 iPhone 安全区，关闭按钮与顶部、底部系统区域保持可触达距离。

@@ -9,7 +9,7 @@ on:
       version:
         description: Version tag to publish without the leading v
         required: true
-        default: "1.15.1"
+        default: "1.15.2"
 
 permissions:
   contents: read

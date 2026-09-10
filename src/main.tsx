@@ -4,6 +4,14 @@ import App from "./App";
 import { I18nProvider } from "./lib/i18n";
 import "./styles.css";
 
+const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+  || navigatorWithStandalone.standalone === true;
+document.documentElement.dataset.ios = String(isIos);
+document.documentElement.dataset.standalone = String(isStandalone);
+
 function updateResponsiveFontScale() {
   const width = window.visualViewport?.width || window.innerWidth;
   const height = window.visualViewport?.height || window.innerHeight;
@@ -25,8 +33,10 @@ createRoot(document.getElementById("root")!).render(
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/sw.js").catch(() => {
-      // The application remains fully usable when a browser blocks service workers.
-    });
+    void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+      .then((registration) => registration.update())
+      .catch(() => {
+        // The application remains fully usable when a browser blocks service workers.
+      });
   }, { once: true });
 }

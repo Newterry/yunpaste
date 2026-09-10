@@ -1,4 +1,4 @@
-const CACHE = "yunpaste-static-v1";
+const CACHE = "yunpaste-static-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {

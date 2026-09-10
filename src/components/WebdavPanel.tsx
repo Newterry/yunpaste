@@ -18,10 +18,12 @@ function joinPath(...parts: string[]) {
   return parts.flatMap((part) => part.split("/")).filter(Boolean).join("/");
 }
 
-export function WebdavPanel({ onToast, onConfigure, onOpenMyFiles }: {
+export function WebdavPanel({ refreshKey, onToast, onConfigure, onOpenMyFiles, onMobileBackHandler }: {
+  refreshKey?: number;
   onToast: (message: string) => void;
   onConfigure: () => void;
   onOpenMyFiles: () => void;
+  onMobileBackHandler?: (handler?: () => boolean) => void;
 }) {
   const [connections, setConnections] = useState<PersonalWebdav[]>([]);
   const [connectionId, setConnectionId] = useState("");
@@ -40,6 +42,7 @@ export function WebdavPanel({ onToast, onConfigure, onOpenMyFiles }: {
   const [clipboard, setClipboard] = useState<{ connectionId: string; mode: "copy" | "move"; items: WebdavItem[] }>();
   const [detail, setDetail] = useState<WebdavItem>();
   const uploadInput = useRef<HTMLInputElement>(null);
+  const loadedConnection = useRef("");
 
   const loadFiles = useCallback((nextPath = path, id = connectionId) => {
     if (!id) return () => {};
@@ -74,8 +77,10 @@ export function WebdavPanel({ onToast, onConfigure, onOpenMyFiles }: {
   useEffect(() => {
     if (!connectionId) return;
     const controller = new AbortController();
+    const nextPath = loadedConnection.current === connectionId ? path : "";
+    loadedConnection.current = connectionId;
     setBusy("files");
-    api.webdavFiles(connectionId, "", controller.signal).then((result) => {
+    api.webdavFiles(connectionId, nextPath, controller.signal).then((result) => {
       setItems(result.items);
       setPath(result.path);
       setSelected(new Set());
@@ -86,7 +91,28 @@ export function WebdavPanel({ onToast, onConfigure, onOpenMyFiles }: {
       if (!controller.signal.aborted) setBusy(undefined);
     });
     return () => controller.abort();
-  }, [connectionId, onToast]);
+  }, [connectionId, onToast, refreshKey]);
+
+  const handleMobileBack = useCallback(() => {
+    if (detail) {
+      setDetail(undefined);
+      return true;
+    }
+    if (destination) {
+      setDestination(undefined);
+      return true;
+    }
+    if (path) {
+      loadFiles(path.split("/").filter(Boolean).slice(0, -1).join("/"), connectionId);
+      return true;
+    }
+    return false;
+  }, [connectionId, destination, detail, loadFiles, path]);
+
+  useEffect(() => {
+    onMobileBackHandler?.(handleMobileBack);
+    return () => onMobileBackHandler?.(undefined);
+  }, [handleMobileBack, onMobileBackHandler]);
 
   const shown = useMemo(() => {
     const normalized = query.normalize("NFKC").trim().toLocaleLowerCase("zh-CN");

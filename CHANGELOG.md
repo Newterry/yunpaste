@@ -8,6 +8,13 @@
 - Android Release 构建优先通过 GitHub Secrets 注入固定 keystore；Secrets 尚未配置时使用临时 CI key，避免其他平台构建完成后因 Android 配置缺失而无法发布 Release。
 - 固定 Windows runner 版本并补齐 Flutter 原生插件链接，降低 Windows hosted runner 的 CMake 构建失败概率。
 
+## 1.15.1
+
+- 手机端预览面板完整适配 iPhone 安全区，关闭按钮与顶部、底部系统区域保持可触达距离。
+- 概览、文件列表和个人 WebDAV 支持原生手感的下拉刷新；Safari 可从左侧边缘右滑返回上一级或关闭预览。
+- 图片预览会根据屏幕和旋转方向自动缩放、居中，并支持双指缩放；PDF 与 Office 转换预览默认适配页面宽度。
+- 个人 WebDAV 的刷新和返回逻辑与当前目录联动，不会意外跳回根目录。
+
 ## 1.15.0
 
 - 新增独立 Flutter 客户端，复用现有 Express 后端并支持 H5、Android 与 iOS 工程构建。

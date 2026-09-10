@@ -64,7 +64,7 @@ RUN apt-get update \
       --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin yunpaste \
     && install -d -o yunpaste -g yunpaste -m 0700 /config /files
 
-ARG APP_VERSION=1.15.0
+ARG APP_VERSION=1.15.1
 ARG VCS_REF=unknown
 ARG RCLONE_VERSION=1.74.4
 ENV APP_VERSION=${APP_VERSION}

@@ -2,7 +2,7 @@
 
 > **一处复制，随处粘贴。** 不下载，不占手机文件空间。
 
-![Version](https://img.shields.io/badge/version-1.15.0-ff655f)
+![Version](https://img.shields.io/badge/version-1.15.1-ff655f)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white)
@@ -226,7 +226,7 @@ cd yunpaste
 也可以直接拉取已发布的稳定镜像：
 
 ```bash
-docker pull newterry/yunpaste:1.15.0
+docker pull newterry/yunpaste:1.15.1
 ```
 
 先准备环境文件和只读密钥目录：
@@ -287,7 +287,7 @@ sudo install -d -o root -g 10001 -m 0750 /srv/yunpaste/secrets
 
 | 变量 | 默认值 | 作用 |
 | --- | --- | --- |
-| `TIEYUN_IMAGE_TAG` | `1.15.0` | 构建标签和运行版本 |
+| `TIEYUN_IMAGE_TAG` | `1.15.1` | 构建标签和运行版本 |
 | `TIEYUN_BIND` | `127.0.0.1` | 宿主机监听地址 |
 | `TIEYUN_PORT` | `8787` | 宿主机监听端口 |
 | `TIEYUN_CONFIG_VOLUME` | `yunpaste-config` | 映射到 `/config` 的命名卷或绝对路径 |

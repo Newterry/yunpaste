@@ -5,6 +5,7 @@ import {
 import { AuthScreen } from "./components/AuthScreen";
 import { ContentModal, ThemeModal } from "./components/Modals";
 import { DestinationPicker } from "./components/DestinationPicker";
+import { MobileGestures } from "./components/MobileGestures";
 import { SendToWebdavDialog } from "./components/SendToWebdavDialog";
 import { MobileNav, Sidebar, Topbar } from "./components/Shell";
 import { api, isAbortError, session, UNAUTHORIZED_EVENT } from "./lib/api";
@@ -120,6 +121,7 @@ export default function App() {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [listRefresh, setListRefresh] = useState(0);
+  const [mobileRefreshKey, setMobileRefreshKey] = useState(0);
   const [activeId, setActiveId] = useState<string>();
   const [overviewPreview, setOverviewPreview] = useState<FileItem>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -151,6 +153,7 @@ export default function App() {
   const fileMutationChains = useRef(new Map<string, Promise<void>>());
   const pasteTrigger = useRef<HTMLElement | null>(null);
   const themeTrigger = useRef<HTMLElement | null>(null);
+  const webdavMobileBack = useRef<(() => boolean) | undefined>(undefined);
 
   const notify = useCallback((message: string) => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -526,6 +529,45 @@ export default function App() {
       setListRefresh((current) => current + 1);
     }, 60);
   }, []);
+
+  const registerWebdavMobileBack = useCallback((handler?: () => boolean) => {
+    webdavMobileBack.current = handler;
+  }, []);
+
+  const refreshMobileWorkspace = useCallback(async () => {
+    if (fileViews.has(view)) refreshFiles();
+    else setMobileRefreshKey((current) => current + 1);
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 560));
+    notify("内容已刷新");
+  }, [notify, refreshFiles, view]);
+
+  const mobileGoBack = useCallback(() => {
+    if (pasteOpen) return setPasteOpen(false);
+    if (themeOpen) return setThemeOpen(false);
+    if (destinationOperation) return setDestinationOperation(undefined);
+    if (webdavSendFiles.length) return setWebdavSendFiles([]);
+    if (mobileNavOpen) return setMobileNavOpen(false);
+    if (activeFile) return closePreview();
+    if (view === "webdav" && webdavMobileBack.current?.()) return;
+    if (view === "files" && currentFolderId) {
+      openFolder(breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].id : null);
+      return;
+    }
+    if (view === "profile" && profileSection !== "account") {
+      selectProfileSection("account");
+      return;
+    }
+    if (view !== "overview") window.history.back();
+  }, [
+    activeFile, breadcrumbs, closePreview, currentFolderId, destinationOperation, mobileNavOpen,
+    openFolder, pasteOpen, profileSection, selectProfileSection, themeOpen, view, webdavSendFiles.length
+  ]);
+
+  const mobileCanGoBack = Boolean(
+    pasteOpen || themeOpen || destinationOperation || webdavSendFiles.length || mobileNavOpen
+    || activeFile || currentFolderId || view !== "overview"
+  );
+  const mobileRefreshSupported = view === "overview" || view === "webdav" || fileViews.has(view);
 
   const uploadFiles = useCallback(async (incoming: File[]) => {
     if (!incoming.length) return false;
@@ -1108,6 +1150,7 @@ export default function App() {
               <OverviewPanel
                 user={user}
                 demoFiles={demoMode ? demoLibrary : undefined}
+                refreshKey={mobileRefreshKey}
                 onNavigate={navigate}
                 onAdd={openPaste}
                 onPreview={previewOverviewFile}
@@ -1118,7 +1161,13 @@ export default function App() {
             ) : view === "profile" ? (
               <ProfilePanel user={user} section={profileSection} onSectionChange={selectProfileSection} onUserChange={updateCurrentUser} onToast={notify} onAccountDeleted={logout} />
             ) : view === "webdav" ? (
-              <WebdavPanel onToast={notify} onConfigure={() => navigate("profile", { profileSection: "webdav" })} onOpenMyFiles={() => navigate("files")} />
+              <WebdavPanel
+                refreshKey={mobileRefreshKey}
+                onToast={notify}
+                onConfigure={() => navigate("profile", { profileSection: "webdav" })}
+                onOpenMyFiles={() => navigate("files")}
+                onMobileBackHandler={registerWebdavMobileBack}
+              />
             ) : view === "tickets" ? (
               <TicketPanel user={user} onToast={notify} />
             ) : view === "admin" ? (
@@ -1202,6 +1251,11 @@ export default function App() {
         </main>
       </div>
       <MobileNav view={view} onNavigate={navigate} onAdd={openPaste} />
+      <MobileGestures
+        canGoBack={mobileCanGoBack}
+        onBack={mobileGoBack}
+        onRefresh={mobileRefreshSupported && !activeFile ? refreshMobileWorkspace : undefined}
+      />
       {pasteOpen && (
         <ContentModal
           onClose={() => setPasteOpen(false)}

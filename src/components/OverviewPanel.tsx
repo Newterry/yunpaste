@@ -15,10 +15,11 @@ function appendUniqueFiles(current: FileItem[], incoming: FileItem[]) {
 }
 
 export function OverviewPanel({
-  user, demoFiles, onNavigate, onAdd, onPreview, onPatch, onDownload, onToast
+  user, demoFiles, refreshKey, onNavigate, onAdd, onPreview, onPatch, onDownload, onToast
 }: {
   user: User;
   demoFiles?: FileItem[];
+  refreshKey?: number;
   onNavigate: (view: NavView) => void;
   onAdd: () => void;
   onPreview: (file: FileItem) => void;
@@ -93,7 +94,7 @@ export function OverviewPanel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [contentFilter, demoFiles, onToast, page, pageSize, user.quota, user.usage]);
+  }, [contentFilter, demoFiles, onToast, page, pageSize, refreshKey, user.quota, user.usage]);
 
   useEffect(() => () => {
     if (copyNoticeTimer.current) window.clearTimeout(copyNoticeTimer.current);

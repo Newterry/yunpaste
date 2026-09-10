@@ -27,6 +27,86 @@ function remoteKind(item: WebdavItem): FileItem["kind"] {
   return "other";
 }
 
+function fittedDocumentUrl(url: string) {
+  if (!url) return "";
+  return `${url.split("#")[0]}#view=FitH&zoom=page-width&pagemode=none`;
+}
+
+function SmartImagePreview({ src, alt, zoom, rotation, onZoom, onError }: {
+  src: string;
+  alt: string;
+  zoom: number;
+  rotation: number;
+  onZoom: (zoom: number) => void;
+  onError: () => void;
+}) {
+  const stage = useRef<HTMLDivElement>(null);
+  const pinch = useRef({ distance: 0, zoom });
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = stage.current;
+    if (!element) return;
+    const update = () => {
+      const style = window.getComputedStyle(element);
+      setStageSize({
+        width: element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        height: element.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+      });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const quarterTurn = Math.abs(rotation / 90) % 2 === 1;
+  const fittedWidth = quarterTurn ? naturalSize.height : naturalSize.width;
+  const fittedHeight = quarterTurn ? naturalSize.width : naturalSize.height;
+  const fit = naturalSize.width && naturalSize.height && stageSize.width && stageSize.height
+    ? Math.min(stageSize.width / fittedWidth, stageSize.height / fittedHeight, 1)
+    : 1;
+  const width = naturalSize.width ? naturalSize.width * fit : undefined;
+  const height = naturalSize.height ? naturalSize.height * fit : undefined;
+
+  const touchDistance = (event: React.TouchEvent) => {
+    const [first, second] = [event.touches[0], event.touches[1]];
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  };
+
+  return (
+    <div
+      ref={stage}
+      className="preview-image-stage"
+      onTouchStart={(event) => {
+        if (event.touches.length !== 2) return;
+        pinch.current = { distance: touchDistance(event), zoom };
+      }}
+      onTouchMove={(event) => {
+        if (event.touches.length !== 2 || !pinch.current.distance) return;
+        onZoom(Math.max(.5, Math.min(4, pinch.current.zoom * touchDistance(event) / pinch.current.distance)));
+      }}
+      onDoubleClick={() => onZoom(1)}
+    >
+      <img
+        className="preview-smart-image"
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        onLoad={(event) => setNaturalSize({
+          width: event.currentTarget.naturalWidth,
+          height: event.currentTarget.naturalHeight
+        })}
+        onError={onError}
+        style={{ width, height, maxWidth: "none", maxHeight: "none", transform: `scale(${zoom}) rotate(${rotation}deg)` }}
+        draggable={false}
+      />
+    </div>
+  );
+}
+
 interface PreviewPanelProps {
   file: FileItem;
   onClose: () => void;
@@ -260,7 +340,7 @@ export function PreviewPanel({
               </div>}
               {file.kind === "text" && text && <div className="preview-media-tools"><button onClick={() => void copyText()} aria-label={t("preview.copyText")} title={t("preview.copyText")}>{textCopied ? <Check /> : <Copy />}</button></div>}
               {file.kind === "image" && mediaUrl && !mediaFailed && (
-                <div className="preview-image-stage"><img src={mediaUrl} alt={file.name} onError={() => setMediaFailed(true)} style={{ transform: `scale(${imageZoom}) rotate(${imageRotation}deg)` }} /></div>
+                <SmartImagePreview src={mediaUrl} alt={file.name} zoom={imageZoom} rotation={imageRotation} onZoom={setImageZoom} onError={() => setMediaFailed(true)} />
               )}
               {file.kind === "video" && mediaUrl && !mediaFailed && (
                 <video src={mediaUrl} controls preload="metadata" onError={() => setMediaFailed(true)} />
@@ -274,7 +354,7 @@ export function PreviewPanel({
               )}
               {documentFrame && mediaUrl && !mediaFailed && (
                 <iframe
-                  src={mediaUrl}
+                  src={fittedDocumentUrl(mediaUrl)}
                   title={file.name}
                   referrerPolicy="no-referrer"
                   onError={() => setMediaFailed(true)}
@@ -422,10 +502,10 @@ export function WebdavPreviewPanel({ connectionId, item, onClose, onDownload }: 
       <div className="preview-format-badge">{fileExtension(item.name) || kind}</div>
       {!loading && !error && image && <div className="preview-media-tools"><button onClick={() => setImageZoom((value) => Math.max(.5, value - .25))} aria-label={t("preview.zoomOut")}><ZoomOut /></button><span>{Math.round(imageZoom * 100)}%</span><button onClick={() => setImageZoom((value) => Math.min(3, value + .25))} aria-label={t("preview.zoomIn")}><ZoomIn /></button><button onClick={() => setImageRotation((value) => value + 90)} aria-label={t("preview.rotate")}><RotateCcw /></button></div>}
       {loading && <div className="preview-loading"><LoaderCircle className="spin" />正在安全读取 WebDAV 文件…</div>}
-      {!loading && !error && image && <div className="preview-image-stage"><img src={url} alt={item.name} style={{ transform: `scale(${imageZoom}) rotate(${imageRotation}deg)` }} /></div>}
+      {!loading && !error && image && <SmartImagePreview src={url} alt={item.name} zoom={imageZoom} rotation={imageRotation} onZoom={setImageZoom} onError={() => setError("图片预览失败")} />}
       {!loading && !error && video && <video src={url} controls preload="metadata" />}
       {!loading && !error && audio && <div className="audio-preview"><span><Play /></span><div className="audio-wave">{Array.from({ length: 30 }).map((_, i) => <i key={i} style={{ height: `${18 + ((i * 17) % 42)}%` }} />)}</div><audio src={url} controls preload="metadata" /></div>}
-      {!loading && !error && document && <iframe src={url} title={item.name} referrerPolicy="no-referrer" />}
+      {!loading && !error && document && <iframe src={fittedDocumentUrl(url)} title={item.name} referrerPolicy="no-referrer" />}
       {!loading && !error && (contentType.startsWith("text/") || kind === "text") && <pre>{formattedText}</pre>}
       {!loading && (error || !(image || video || audio || document || contentType.startsWith("text/") || kind === "text")) && <div className="preview-fallback"><FileTypeIcon file={file} large /><strong>{item.name}</strong><span>{error || t("preview.unsupported")}</span><button className="button button--secondary" onClick={onDownload}><Download />{t("common.download")}</button></div>}
     </div> : <div className="info-view"><span className="info-view__hero"><Info /></span><h3>WebDAV 文件信息</h3><dl className="meta-list meta-list--expanded"><div><dt>类型</dt><dd>{item.mime || contentType || "未知"}</dd></div><div><dt>大小</dt><dd>{formatBytes(item.size)}</dd></div><div><dt>远端路径</dt><dd className="mono">{item.path}</dd></div><div><dt>修改时间</dt><dd>{item.modifiedAt ? formatDate(item.modifiedAt) : "未知"}</dd></div><div><dt>连接</dt><dd>当前用户的个人 WebDAV</dd></div></dl></div>}</div>

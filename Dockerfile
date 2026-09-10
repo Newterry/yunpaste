@@ -23,7 +23,7 @@ RUN set -eux; \
       "/tmp/rclone/rclone-v${RCLONE_VERSION}-linux-${TARGETARCH}/rclone" \
       /out/rclone
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 
 RUN apt-get update \
@@ -42,7 +42,7 @@ RUN npm run build \
     && npm prune --omit=dev \
     && node -e "const Database=require('better-sqlite3-multiple-ciphers');const db=new Database(':memory:');db.prepare('SELECT 1').get();db.close()"
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     PORT=8787 \
     CONFIG_DIR=/config \

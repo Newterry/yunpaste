@@ -5,10 +5,10 @@ services:
     build:
       context: .
       args:
-        APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.15.2}"
+        APP_VERSION: "${TIEYUN_IMAGE_TAG:-1.15.3}"
         VCS_REF: "${VCS_REF:-unknown}"
         RCLONE_VERSION: "1.74.4"
-    image: "yunpaste:${TIEYUN_IMAGE_TAG:-1.15.2}"
+    image: "yunpaste:${TIEYUN_IMAGE_TAG:-1.15.3}"
     restart: unless-stopped
     stop_grace_period: 40s
     ports:

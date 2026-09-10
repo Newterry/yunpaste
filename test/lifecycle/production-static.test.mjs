@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { after, before, describe, it } from "node:test";
 import {
   cleanupTestDataDir,
@@ -71,5 +72,19 @@ describe("生产静态资源与缓存策略", { concurrency: false }, () => {
     const avatarSprite = await fetch(`${server.baseUrl}/assets/cute-animal-avatars-v1.webp`);
     assert.equal(avatarSprite.status, 200);
     assert.match(avatarSprite.headers.get("content-type") || "", /^image\/webp/);
+  });
+
+  it("手机添加内容弹层始终避开顶部安全区", async () => {
+    const css = await readFile(new URL("../../src/styles.css", import.meta.url), "utf8");
+    assert.match(
+      css,
+      /height:\s*calc\(100dvh - var\(--mobile-safe-top\) - 8px\)/,
+      "添加内容弹层应从 iPhone 顶部安全区下方开始"
+    );
+    assert.doesNotMatch(
+      css,
+      /\.content-modal\s*{\s*max-height:\s*100dvh;/,
+      "独立运行模式不能再把添加内容弹层覆盖到状态栏"
+    );
   });
 });

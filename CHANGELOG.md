@@ -8,6 +8,11 @@
 - Android Release 构建优先通过 GitHub Secrets 注入固定 keystore；Secrets 尚未配置时使用临时 CI key，避免其他平台构建完成后因 Android 配置缺失而无法发布 Release。
 - 固定 Windows runner 版本并补齐 Flutter 原生插件链接，降低 Windows hosted runner 的 CMake 构建失败概率。
 
+## 1.15.3
+
+- 修复 iPhone 17 Pro Max 主屏幕模式下“添加内容”弹层覆盖状态栏、标题和关闭按钮过高的问题。
+- 移除独立运行模式对弹层高度的错误覆盖，让弹层统一从顶部安全区下方开始，并保留额外触控间距。
+
 ## 1.15.2
 
 - 修复 iPhone Safari 与主屏幕模式顶部安全区被挤进固定导航高度、导致状态栏和页面内容重叠的问题。
